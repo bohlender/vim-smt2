@@ -1,0 +1,1 @@
+# vim-z3-smt2-syntax
