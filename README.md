@@ -1,5 +1,4 @@
 # Extended SMT-LIB2 support for VIM
-
 ![Example](/example.png?raw=true "Example")
 
 ## What is this?
@@ -12,15 +11,12 @@ Besides the base SMT-LIB2 language, this plugin **supports the extensions used b
 *Note: Unlike other syntax highlighters for VIM, this one is **directly derived from the source** of the [Z3's online demo](https://rise4fun.com/Z3/).*
 
 ## Installation
-
-### Using package managers (recommended)
-* **Vundle**: Add `Plugin 'bohlender/vim-z3-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*).
-
-### Manual (not recommended)
-Simply drop the contents of this repository into the `~/.vim/` directory.
+| Plugin Manager | Instructions |
+| ------------- | ------------- |
+| [Vundle](https://github.com/VundleVim/Vundle.vim) | Add `Plugin 'bohlender/vim-z3-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*) and run `:PluginInstall` in VIM|
+| manual | Drop the contents of this repository into your `~/.vim/` directory |
 
 ## FAQ
-
 **Q**: VIM does not show any syntax highlighting - neither for `*.smt2` files nor for others
 **A**: You can enable syntax highlighting by typing `:syntax on` in VIM or adding `syntax on` to the `~/.vimrc` file.
 
