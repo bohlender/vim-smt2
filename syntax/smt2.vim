@@ -6,7 +6,7 @@
 if exists("b:current_syntax")
   finish
 endif
-let b:current_syntax = "z3-smt2"
+let b:current_syntax = "smt2"
 
 " Comments
 syntax match smt2Comment ";.*$"
@@ -44,6 +44,9 @@ syntax match smt2Float "\<[0-9]\+\.[0-9]\+\([eE][\-+]\=[0-9]\+\)\=\>"
 " Delimiter
 syntax match smt2Delimiter "[()]"
 
+" Error
+syntax keyword smt2Error error
+
 highlight def link smt2Comment     Comment
 highlight def link smt2Keyword     Function
 highlight def link smt2Operator    Operator
@@ -58,4 +61,4 @@ highlight def link smt2Hex         Number
 highlight def link smt2Binary      Number
 highlight def link smt2Int         Number
 highlight def link smt2Delimiter   Delimiter
-
+highlight def link smt2Error       Error
