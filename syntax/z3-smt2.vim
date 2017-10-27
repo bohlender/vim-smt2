@@ -7,6 +7,7 @@
 if exists("b:current_syntax")
   finish
 endif
+let b:current_syntax = "z3-smt2"
 
 " Comments
 syntax match smt2Comment ";.*$"
@@ -21,6 +22,9 @@ syntax match smt2Operator "[=\|>\|<\|<=\|>=\|=>\|+\|\-\|*\|/]"
 " Builtins
 syntax keyword smt2Builtin mod div rem to_real and or not distinct to_int is_int xor if ite true false root-obj sat unsat const map store select sat unsat bit1 bit0 bvneg bvadd bvsub bvmul bvsdiv bvudiv bvsrem bvurem bvsmod  bvule bvsle bvuge bvsge bvult bvslt bvugt bvsgt bvand bvor bvnot bvxor bvnand bvnor bvxnor concat sign_extend zero_extend extract repeat bvredor bvredand bvcomp bvshl bvlshr bvashr rotate_left rotate_right get-assertions
 syntax match smt2Builtin "[\^\~]"
+
+" Identifier
+syntax match smt2Identifier "\<[a-z_][a-zA-Z0-9_\-\.']*\>"
 
 " Types
 syntax match smt2Type "\<[A-Z][a-zA-Z0-9_\-\.']*\>"
@@ -44,15 +48,15 @@ syntax match smt2Delimiter "[()]"
 highlight def link smt2Comment     Comment
 highlight def link smt2Keyword     Function
 highlight def link smt2Operator    Operator
-highlight def link smt2Builtin     Statement
+highlight def link smt2Builtin     Operator
+highlight def link smt2Identifier  Normal
 highlight def link smt2Type        Type
 highlight def link smt2String      String
-highlight def link smt2Option      String
-highlight def link smt2Constructor Special
+highlight def link smt2Option      PreProc
+highlight def link smt2Constructor Function
 highlight def link smt2Float       Float
 highlight def link smt2Hex         Number
 highlight def link smt2Binary      Number
 highlight def link smt2Int         Number
 highlight def link smt2Delimiter   Delimiter
 
-let b:current_syntax = "z3-smt2"
