@@ -1,7 +1,6 @@
 " Vim syntax file
 " " Language:     SMT-LIB2 with Z3's extensions
 " " Maintainer:   Dimitri Bohlender <bohlender@embedded.rwth-aachen.de>
-" " Last Change:  2017 Oct 25
 
 " Quit if a syntax file is already loaded
 if exists("b:current_syntax")
