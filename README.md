@@ -8,7 +8,7 @@ Although SMT-LIB is the standard language, supported by most [SMT](https://en.wi
 Such extensions may range from syntactical sugar to fine-grained control of the underlying solver-procedure.
 Besides the base SMT-LIB2 language, this plugin **supports the extensions used by the [Z3](https://github.com/Z3Prover/z3) SMT solver**.
 
-*Note: Unlike other syntax highlighters for VIM, this one is **directly derived from the source** of the [Z3's online demo](https://rise4fun.com/Z3/).*
+*Note: Unlike other syntax highlighters for VIM, this one is **directly derived from the source** of [Z3's online demo](https://rise4fun.com/Z3/).*
 
 ## Installation
 | Plugin Manager | Instructions |
