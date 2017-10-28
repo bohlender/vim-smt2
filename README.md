@@ -32,9 +32,12 @@ Otherwise, to use the shortcuts, you have to either:
 
 ## FAQ
 > Why does VIM  not show any syntax highlighting - neither for `*.smt2` files nor for others?
-Most likely syntax highlighting is simply disabled. You can enable syntax highlighting by typing `:syntax on` in VIM or adding `syntax on` to your `~/.vimrc` file.
 
-> What do you run to get the look shown on the screenshot?
+Most likely syntax highlighting is simply disabled.
+You can enable syntax highlighting by typing `:syntax on` in VIM or adding `syntax on` to your `~/.vimrc` file.
+
+> What do you use to get the look shown on the screenshot?
+
 The screenshot was made with the VIM colorscheme [monokai](https://github.com/crusoexia/vim-monokai) and the [airline](https://github.com/vim-airline/vim-airline) standard theme `dark`.
 
 ## Contribute
