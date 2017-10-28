@@ -10,11 +10,11 @@ Besides the base SMT-LIB2 language, this plugin **supports the extensions used b
 
 *Note: Unlike other syntax highlighters for VIM, this one is **derived directly from the source** of [Z3's online demo](https://rise4fun.com/Z3/).*
 
-The plugin **also provides shortcuts** for feeding to Z3:
+The plugin **also provides shortcuts** for passing the files to Z3:
 * `<localleader>r` calls Z3 for the current file (on the terminal)
 * `<localleader>R` calls Z3 for the current file and puts the output in a new split with syntax highlighting
 
-*Note: Unless you've set `<localleader>` to a custom key, it is `\` by default.*
+*Note: Unless you've set `<localleader>` to a custom key, it is `\` (VIM default).*
 
 Here you can see it in action:
 [![asciicast](https://asciinema.org/a/4LP65uSchEbciwnRsdTImwzqW.png)](https://asciinema.org/a/4LP65uSchEbciwnRsdTImwzqW)
