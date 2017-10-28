@@ -16,6 +16,9 @@ The plugin **also provides shortcuts** for feeding to Z3:
 
 *Note: Unless you've set `<localleader>` to a custom key, it is `\` by default.*
 
+Here you can see it in action:
+[![asciicast](https://asciinema.org/a/4LP65uSchEbciwnRsdTImwzqW.png)](https://asciinema.org/a/4LP65uSchEbciwnRsdTImwzqW)
+
 ## Installation
 | Plugin Manager | Instructions |
 | ------------- | ------------- |
