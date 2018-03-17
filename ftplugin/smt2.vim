@@ -9,3 +9,4 @@ endif
 " Mappings
 nnoremap <silent> <buffer> <localleader>r :call smt2#RunZ3()<cr>
 nnoremap <silent> <buffer> <localleader>R :call smt2#RunZ3AndShowResult()<cr>
+nnoremap <silent> <buffer> <localleader>v :call smt2#PrintZ3Version()<cr>

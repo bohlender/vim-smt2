@@ -22,3 +22,9 @@ function! smt2#RunZ3AndShowResult()
     call append(0, split(output, '\v\n'))
     normal! gg
 endfunction
+
+" Requests Z3's version
+function! smt2#PrintZ3Version()
+    silent !clear
+    execute "!" . g:smt2_z3_command . " -version"
+endfunction
