@@ -10,10 +10,10 @@ Besides the base SMT-LIB2 language, this plugin **supports the extensions used b
 
 *Note: Unlike other syntax highlighters for VIM, this one is **derived directly from the source** of [Z3's online demo](https://rise4fun.com/Z3/).*
 
-The plugin **also provides shortcuts** for interacting with Z3:
-* `<localleader>r` calls Z3 for the current file (on the terminal)
-* `<localleader>R` calls Z3 for the current file and puts the output in a new split with syntax highlighting
-* `<localleader>v` prints Z3's version (handy if you switch often)
+The plugin **also provides shortcuts** for evaluating the current buffer with a SMT solver of your choice (default: [boolector](http://fmv.jku.at/boolector)):
+* `<localleader>r` evaluate the current file (on the terminal)
+* `<localleader>R` evaluate the current file and puts the output in a new split with syntax highlighting
+* `<localleader>v` prints the solver's version (handy if you switch often)
 
 *Note: Unless you've set `<localleader>` to a custom key, it is `\` (VIM default).*
 
@@ -26,10 +26,12 @@ Here you can see it in action:
 | [Vundle](https://github.com/VundleVim/Vundle.vim) | Add `Plugin 'bohlender/vim-z3-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*) and run `:PluginInstall` in VIM|
 | manual | Drop the contents of this repository into your `~/.vim/` directory |
 
-If you only care about the syntax highlighting and don't need shortcuts for calling Z3, you're done.
-Otherwise, to use the shortcuts, you have to either:
-* have `z3` in your `$PATH`, or
-* set `g:smt2_z3_command` in your `~/.vimrc` to the command for running `z3` on your system.
+## Configuration
+If you only care about the syntax highlighting and don't need shortcuts for calling a solver, you're done.
+Otherwise, to use the shortcuts, you need to:
+* have `boolector` in your `$PATH`, or
+* set `g:smt2_solver_command` in your `~/.vimrc` to the command for running a solver of your choice and also
+* set `g:smt2_solver_version` to the solver's command line switch for printing it's version.
 
 ## FAQ
 > Why does VIM  not show any syntax highlighting - neither for `*.smt2` files nor for others?

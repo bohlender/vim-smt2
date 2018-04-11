@@ -1,1 +1,1 @@
-autocmd BufRead,BufNewFile *.smt2 set filetype=smt2
+autocmd BufRead,BufNewFile *.smt,*.smt2 set filetype=smt2

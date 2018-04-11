@@ -1,12 +1,12 @@
-" Invokes Z3 on current file
-function! smt2#RunZ3()
+" Invokes the solver on current file
+function! smt2#RunSolver()
     silent !clear
-    execute "!" . g:smt2_z3_command . " " . bufname("%")
+    execute "!" . g:smt2_solver_command . " " . bufname("%")
 endfunction
 
-" Puts Z3's output in new split (replaces old split)
-function! smt2#RunZ3AndShowResult()
-    let output = system(g:smt2_z3_command . " " . bufname("%") . " 2>&1")
+" Puts the solver's output in new split (replaces old split)
+function! smt2#RunSolverAndShowResult()
+    let output = system(g:smt2_solver_command . " " . bufname("%") . " 2>&1")
 
     " Create split (or reuse existent)
     if exists("s:outputbufnr") && bufwinnr(s:outputbufnr) > 0
@@ -15,7 +15,7 @@ function! smt2#RunZ3AndShowResult()
         silent! vnew
         let s:outputbufnr=bufnr('%')
     endif
-   
+
     " Clear & (re-)fill contents
     silent! normal! ggdG
     setlocal filetype=smt2 buftype=nofile nobuflisted noswapfile
@@ -23,8 +23,8 @@ function! smt2#RunZ3AndShowResult()
     normal! gg
 endfunction
 
-" Requests Z3's version
-function! smt2#PrintZ3Version()
+" Requests the solver's version
+function! smt2#PrintSolverVersion()
     silent !clear
-    execute "!" . g:smt2_z3_command . " -version"
+    execute "!" . g:smt2_solver_command . " ". g:smt2_solver_version
 endfunction
