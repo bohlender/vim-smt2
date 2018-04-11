@@ -11,8 +11,8 @@ Besides the base SMT-LIB2 language, this plugin **supports the extensions used b
 *Note: Unlike other syntax highlighters for VIM, this one is **derived directly from the source** of [Z3's online demo](https://rise4fun.com/Z3/).*
 
 The plugin **also provides shortcuts** for evaluating the current buffer with a SMT solver of your choice (default: [boolector](http://fmv.jku.at/boolector)):
-* `<localleader>r` evaluate the current file (on the terminal)
-* `<localleader>R` evaluate the current file and puts the output in a new split with syntax highlighting
+* `<localleader>r` evaluates the current file (on the terminal)
+* `<localleader>R` evaluates the current file and puts the output in a new split with syntax highlighting
 * `<localleader>v` prints the solver's version (handy if you switch often)
 
 *Note: Unless you've set `<localleader>` to a custom key, it is `\` (VIM default).*
