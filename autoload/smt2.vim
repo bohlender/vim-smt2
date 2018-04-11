@@ -26,5 +26,5 @@ endfunction
 " Requests the solver's version
 function! smt2#PrintSolverVersion()
     silent !clear
-    execute "!" . g:smt2_solver_command . " ". g:smt2_solver_version
+    execute "!" . g:smt2_solver_command . " " . g:smt2_solver_version_switch
 endfunction

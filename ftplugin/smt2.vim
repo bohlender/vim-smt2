@@ -8,8 +8,8 @@ endif
 
 " If no command line switch for printing the solver's version is specified in
 " ~/.vimrc, use '--version'
-if !exists("g:smt2_solver_version")
-    let g:smt2_solver_version = "--version"
+if !exists("g:smt2_solver_version_switch")
+    let g:smt2_solver_version_switch = "--version"
 endif
 
 " Mappings
