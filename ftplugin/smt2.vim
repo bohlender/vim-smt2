@@ -16,3 +16,6 @@ endif
 nnoremap <silent> <buffer> <localleader>r :call smt2#RunSolver()<cr>
 nnoremap <silent> <buffer> <localleader>R :call smt2#RunSolverAndShowResult()<cr>
 nnoremap <silent> <buffer> <localleader>v :call smt2#PrintSolverVersion()<cr>
+
+" Comment String
+setlocal commentstring=;%s
