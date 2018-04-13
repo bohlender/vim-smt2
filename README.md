@@ -21,10 +21,29 @@ Here you can see it in action:
 [![asciicast](https://asciinema.org/a/4LP65uSchEbciwnRsdTImwzqW.png)](https://asciinema.org/a/4LP65uSchEbciwnRsdTImwzqW)
 
 ## Installation
-| Plugin Manager | Instructions |
-| ------------- | ------------- |
-| [Vundle](https://github.com/VundleVim/Vundle.vim) | add `Plugin 'phlo/vim-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*) and run `:PluginInstall` in VIM|
-| manual | drop the contents of this repository into your `~/.vim/` directory |
+
+### Plugin Managers (Recommended)
+
+#### [Pathogen](https://github.com/tpope/vim-pathogen)
+1. `cd ~/.vim/bundle`
+2. `git clone https://github.com/phlo/vim-smt2`
+
+#### [Vundle](https://github.com/VundleVim/Vundle.vim)
+1. add `Plugin 'phlo/vim-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*)
+2. reload your `.vimrc` or restart VIM
+3. run `:PluginInstall` in VIM
+
+### Manual Installation
+Extract the archive or clone the repository into a directory in your `runtimepath` (e.g. `~/.vim/`):
+
+1. `cd ~/.vim/`
+2. `curl -L https://github.com/phlo/vim-smt2/tarball/master | tar xz --strip 1`
+
+### Post Installation
+Make sure that you have filetype plugins enabled. See **|filetype-plugin-on|** for details, or simply add the following to your `.vimrc`:
+```
+filetype plugin on
+```
 
 ## Configuration
 If you only care about the syntax highlighting and don't need shortcuts for calling a solver, you're done.
