@@ -12,14 +12,123 @@ let b:current_syntax = "smt2"
 syntax match smt2Comment ";.*$"
 
 " Keywords
-syntax keyword smt2Keyword define-fun define-const assert push pop assert check-sat declare-const declare-fun get-model get-value declare-sort declare-datatypes reset eval set-logic help get-assignment exit get-proof get-unsat-core echo let forall exists define-sort set-option get-option set-info check-sat-using apply simplify elim-quantifiers display as get-info declare-map declare-rel declare-var rule query get-user-tactics minimize maximize assert-soft
+syntax keyword smt2Keyword
+      \ apply
+      \ as
+      \ assert
+      \ assert
+      \ assert-soft
+      \ check-sat
+      \ check-sat-using
+      \ declare-const
+      \ declare-datatypes
+      \ declare-fun
+      \ declare-map
+      \ declare-rel
+      \ declare-sort
+      \ declare-var
+      \ define-const
+      \ define-fun
+      \ define-sort
+      \ display
+      \ echo
+      \ elim-quantifiers
+      \ eval
+      \ exists
+      \ exit
+      \ forall
+      \ get-assignment
+      \ get-info
+      \ get-model
+      \ get-option
+      \ get-proof
+      \ get-unsat-core
+      \ get-user-tactics
+      \ get-value
+      \ help
+      \ let
+      \ maximize
+      \ minimize
+      \ pop
+      \ push
+      \ query
+      \ reset
+      \ rule
+      \ set-info
+      \ set-logic
+      \ set-option
+      \ simplify
 syntax match smt2Keyword "!"
 
 " Operators
 syntax match smt2Operator "[=\|>\|<\|<=\|>=\|=>\|+\|\-\|*\|/]"
 
 " Builtins
-syntax keyword smt2Builtin mod div rem to_real and or not distinct to_int is_int xor if ite true false root-obj sat unsat const map store select sat unsat bit1 bit0 bvneg bvadd bvsub bvmul bvsdiv bvudiv bvsrem bvurem bvsmod  bvule bvsle bvuge bvsge bvult bvslt bvugt bvsgt bvand bvor bvnot bvxor bvnand bvnor bvxnor concat sign_extend zero_extend extract repeat bvredor bvredand bvcomp bvshl bvlshr bvashr rotate_left rotate_right get-assertions
+syntax keyword smt2Builtin
+      \ and
+      \ bit0
+      \ bit1
+      \ bvadd
+      \ bvand
+      \ bvashr
+      \ bvcomp
+      \ bvlshr
+      \ bvmul
+      \ bvnand
+      \ bvneg
+      \ bvnor
+      \ bvnot
+      \ bvor
+      \ bvredand
+      \ bvredor
+      \ bvsdiv
+      \ bvsge
+      \ bvsgt
+      \ bvshl
+      \ bvsle
+      \ bvslt
+      \ bvsmod
+      \ bvsrem
+      \ bvsub
+      \ bvudiv
+      \ bvuge
+      \ bvugt
+      \ bvule
+      \ bvult
+      \ bvurem
+      \ bvxnor
+      \ bvxor
+      \ concat
+      \ const
+      \ distinct
+      \ div
+      \ extract
+      \ false
+      \ get-assertions
+      \ if
+      \ is_int
+      \ ite
+      \ map
+      \ mod
+      \ not
+      \ or
+      \ rem
+      \ repeat
+      \ root-obj
+      \ rotate_left
+      \ rotate_right
+      \ sat
+      \ sat
+      \ select
+      \ sign_extend
+      \ store
+      \ to_int
+      \ to_real
+      \ true
+      \ unsat
+      \ unsat
+      \ xor
+      \ zero_extend
 syntax match smt2Builtin "[\^\~]"
 
 " Identifier
@@ -39,7 +148,7 @@ syntax match smt2Constructor "\<\$[a-zA-Z0-9_\-\.']*\>"
 syntax match smt2Int "\<[0-9]\+\>"
 syntax match smt2Hex "\<[0#][xX][0-9a-fA-F]\+\>"
 syntax match smt2Binary "\<#b[01]\+\>"
-syntax match smt2Float "\<[0-9]\+\.[0-9]\+\([eE][\-+]\=[0-9]\+\)\=\>" 
+syntax match smt2Float "\<[0-9]\+\.[0-9]\+\([eE][\-+]\=[0-9]\+\)\=\>"
 
 " Delimiter
 syntax match smt2Delimiter "[()]"
