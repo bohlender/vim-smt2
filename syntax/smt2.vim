@@ -21,6 +21,7 @@ syntax keyword smt2Keyword
       \ check-sat
       \ check-sat-using
       \ declare-const
+      \ declare-datatype
       \ declare-datatypes
       \ declare-fun
       \ declare-map
@@ -47,6 +48,7 @@ syntax keyword smt2Keyword
       \ get-value
       \ help
       \ let
+      \ match
       \ maximize
       \ minimize
       \ pop
