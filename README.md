@@ -24,9 +24,9 @@ Here you can see it in action:
 
 | Plugin Manager | Instructions |
 | ------------- | ------------- |
-| [Pathogen](https://github.com/tpope/vim-pathogen) | <ol style="display: table-cell; vertical-align: middle"><li>`cd ~/.vim/bundle`</li><li>`git clone https://github.com/bohlender/vim-smt2`</li></ol> |
-| [Vundle](https://github.com/VundleVim/Vundle.vim) | <ol style="display: table-cell; vertical-align: middle"><li>add `Plugin 'bohlender/vim-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*)</li><li>reload your `~/.vimrc` or restart VIM</li><li>run `:PluginInstall` in VIM</li></ol>|
-| manual (discouraged) | Extract the archive or clone the repository into a directory in your `runtimepath` (e.g. `~/.vim/`): <ol style="display: table-cell; vertical-align: middle"><li>`cd ~/.vim/`</li><li>`curl -L https://github.com/bohlender/vim-smt2/tarball/master | tar xz --strip 1`</li></ol> |
+| [Pathogen](https://github.com/tpope/vim-pathogen) | <ol><li>`cd ~/.vim/bundle`</li><li>`git clone https://github.com/bohlender/vim-smt2`</li></ol> |
+| [Vundle](https://github.com/VundleVim/Vundle.vim) | <ol><li>add `Plugin 'bohlender/vim-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*)</li><li>reload your `~/.vimrc` or restart VIM</li><li>run `:PluginInstall` in VIM</li></ol> |
+| manual (discouraged) | Extract the archive or clone the repository into a directory in your `runtimepath` (e.g. `~/.vim/`): <ol><li>`cd ~/.vim/`</li><li>`curl -L https://github.com/bohlender/vim-smt2/tarball/master | tar xz --strip 1`</li></ol> |
 
 ## Configuration
 **If you only care about the syntax highlighting** and don't need shortcuts for calling a solver, **you're done**.
