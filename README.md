@@ -10,7 +10,7 @@ Besides the base SMT-LIB2 language, this plugin **supports the extensions used b
 
 *Note: Unlike other SMT-LIB2 syntax highlighters for VIM, this one is **derived directly from the source** of [Z3's online demo](https://rise4fun.com/Z3/).*
 
-The plugin also provides **shortcuts for evaluating the current file**, using a SMT solver of your choice (**default: [boolector](http://fmv.jku.at/boolector)**):
+The plugin also provides **shortcuts for evaluating the current file**, using a SMT solver of your choice (**defaults to [Z3](https://github.com/Z3Prover/z3) or [boolector](http://fmv.jku.at/boolector)**):
 * `<localleader>r` evaluates the current file (in a terminal)
 * `<localleader>R` evaluates the current file and puts the output in a new split with syntax highlighting
 * `<localleader>v` prints the solver's version (handy if you switch often)
@@ -26,10 +26,10 @@ Here you can see it in action:
 
 #### [Pathogen](https://github.com/tpope/vim-pathogen)
 1. `cd ~/.vim/bundle`
-2. `git clone https://github.com/phlo/vim-smt2`
+2. `git clone https://github.com/bohlender/vim-smt2`
 
 #### [Vundle](https://github.com/VundleVim/Vundle.vim)
-1. add `Plugin 'phlo/vim-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*)
+1. add `Plugin 'bohlender/vim-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*)
 2. reload your `.vimrc` or restart VIM
 3. run `:PluginInstall` in VIM
 
@@ -37,19 +37,14 @@ Here you can see it in action:
 Extract the archive or clone the repository into a directory in your `runtimepath` (e.g. `~/.vim/`):
 
 1. `cd ~/.vim/`
-2. `curl -L https://github.com/phlo/vim-smt2/tarball/master | tar xz --strip 1`
-
-### Post Installation
-Make sure that you have filetype plugins enabled. See **|filetype-plugin-on|** for details, or simply add the following to your `.vimrc`:
-```
-filetype plugin on
-```
+2. `curl -L https://github.com/bohlender/vim-smt2/tarball/master | tar xz --strip 1`
 
 ## Configuration
-If you only care about the syntax highlighting and don't need shortcuts for calling a solver, you're done.
+**If you only care about the syntax highlighting** and don't need shortcuts for calling a solver, **you're done**.
+
 Otherwise, you need to:
-* have `boolector` in your `$PATH`, or
-* set `g:smt2_solver_command` in your `~/.vimrc` to the command for calling the solver of your choice (e.g. `boolector -m`) and also
+* have `z3` or `boolector` in your `$PATH`, **or**
+* set `g:smt2_solver_command` in your `~/.vimrc` to the command for calling the solver of your choice (e.g. `let g:smt2_solver_command="boolector -m"`) and also
 * set `g:smt2_solver_version_switch` to the solver's command line switch for printing it's version (default: `--version`).
 
 ## FAQ
@@ -57,6 +52,13 @@ Otherwise, you need to:
 
 Most likely syntax highlighting is simply disabled.
 You can enable syntax highlighting by typing `:syntax on` in VIM or adding `syntax on` to your `~/.vimrc` file.
+
+> Why does the ending of a file, e.g. `*.smt2`, not affect the plugins loaded by VIM?
+
+Make sure that you have filetype plugins enabled. See **|filetype-plugin-on|** for details, or simply add the following to your `.vimrc`:
+```
+filetype plugin on
+```
 
 > What do you use to get the look shown on the screenshot?
 
