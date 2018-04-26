@@ -1,9 +1,15 @@
 setlocal iskeyword+=-,:,#,',$
 
-" If no command for invoking the solver is specified in ~/.vimrc,
-" assume 'boolector' to be in $PATH
+" If no command for invoking the solver is specified in ~/.vimrc, default to
+" looking for 'z3' or 'boolector' in $PATH
 if !exists("g:smt2_solver_command")
-    let g:smt2_solver_command = "boolector"
+    if executable("z3")
+        let g:smt2_solver_command = "z3"
+    elseif executable("boolector")
+        let g:smt2_solver_command = "boolector"
+    else
+        echoerr "No SMT solver command set. Add 'let g:smt2_solver_command=...' to your ~/.vimrc"
+    endif
 endif
 
 " If no command line switch for printing the solver's version is specified in
