@@ -4,7 +4,7 @@
 ## What is this?
 A VIM plugin that adds syntax highlighting for the [SMT-LIB2](http://smtlib.cs.uiowa.edu/) format, i.e. `*.smt2` files.
 
-Although SMT-LIB is the standard language supported by most [SMT](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) solvers, some of them introduce **custom language extensions**.
+Although SMT-LIB2 is the standard language supported by most [SMT](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) solvers, some of them introduce **custom language extensions**.
 Such extensions may range from syntactical sugar to fine-grained control over the underlying solver-procedure.
 Besides the base SMT-LIB2 language, this plugin **supports the extensions used by the [Z3](https://github.com/Z3Prover/z3) SMT solver**.
 
@@ -24,9 +24,9 @@ Here you can see it in action:
 
 | Plugin Manager | Instructions |
 | ------------- | ------------- |
-| [Pathogen](https://github.com/tpope/vim-pathogen) |<ol><li><code>cd ~/.vim/bundle</code></li><li><code>git clone https://github.com/bohlender/vim-smt2</code></li></ol>|
-| [Vundle](https://github.com/VundleVim/Vundle.vim) | <ol><li>add <code>Plugin 'bohlender/vim-smt2'</code> to your <code>~/.vimrc</code> file (*before <code>call vundle#end()</code>*)</li><li>reload your <code>.vimrc</code> or restart VIM</li><li>run <code>:PluginInstall</code> in VIM</li></ol>|
-| manual (discouraged) | Extract the archive or clone the repository into a directory in your `runtimepath` (e.g. `~/.vim/`):<ol><li><code>cd ~/.vim/</code></li><li><code>curl -L https://github.com/bohlender/vim-smt2/tarball/master | tar xz --strip 1</code></li></ol>|
+| [Pathogen](https://github.com/tpope/vim-pathogen) | <ol style="display: table-cell; vertical-align: middle"><li>`cd ~/.vim/bundle`</li><li>`git clone https://github.com/bohlender/vim-smt2`</li></ol> |
+| [Vundle](https://github.com/VundleVim/Vundle.vim) | <ol style="display: table-cell; vertical-align: middle"><li>add `Plugin 'bohlender/vim-smt2'` to your `~/.vimrc` file (*before `call vundle#end()`*)</li><li>reload your `~/.vimrc` or restart VIM</li><li>run `:PluginInstall` in VIM</li></ol>|
+| manual (discouraged) | Extract the archive or clone the repository into a directory in your `runtimepath` (e.g. `~/.vim/`): <ol style="display: table-cell; vertical-align: middle"><li>`cd ~/.vim/`</li><li>`curl -L https://github.com/bohlender/vim-smt2/tarball/master | tar xz --strip 1`</li></ol> |
 
 ## Configuration
 **If you only care about the syntax highlighting** and don't need shortcuts for calling a solver, **you're done**.
@@ -44,7 +44,7 @@ You can enable syntax highlighting by typing `:syntax on` in VIM or adding `synt
 
 > Why does the ending of a file, e.g. `*.smt2`, not affect the plugins loaded by VIM?
 
-Make sure that you have filetype plugins enabled. See **|filetype-plugin-on|** for details, or simply add the following to your `.vimrc`:
+Make sure that you have filetype plugins enabled. See **|filetype-plugin-on|** for details, or simply add the following to your `~/.vimrc`:
 ```
 filetype plugin on
 ```
