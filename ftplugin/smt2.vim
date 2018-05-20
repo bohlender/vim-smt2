@@ -7,8 +7,6 @@ if !exists("g:smt2_solver_command")
         let g:smt2_solver_command = "z3"
     elseif executable("boolector")
         let g:smt2_solver_command = "boolector"
-    else
-        echoerr "No SMT solver command set. Add 'let g:smt2_solver_command = \"...\"' to your ~/.vimrc"
     endif
 endif
 
