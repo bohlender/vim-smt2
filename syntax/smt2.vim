@@ -16,10 +16,10 @@ syntax keyword smt2Keyword
       \ apply
       \ as
       \ assert
-      \ assert
       \ assert-soft
       \ check-sat
       \ check-sat-using
+      \ check-sat-assuming
       \ declare-const
       \ declare-datatype
       \ declare-datatypes
@@ -30,6 +30,8 @@ syntax keyword smt2Keyword
       \ declare-var
       \ define-const
       \ define-fun
+      \ define-fun-rec
+      \ define-funs-rec
       \ define-sort
       \ display
       \ echo
@@ -38,11 +40,13 @@ syntax keyword smt2Keyword
       \ exists
       \ exit
       \ forall
+      \ get-asserstions
       \ get-assignment
       \ get-info
       \ get-model
       \ get-option
       \ get-proof
+      \ get-unsat-assumptions
       \ get-unsat-core
       \ get-user-tactics
       \ get-value
@@ -55,6 +59,7 @@ syntax keyword smt2Keyword
       \ push
       \ query
       \ reset
+      \ reset-assertions
       \ rule
       \ set-info
       \ set-logic
