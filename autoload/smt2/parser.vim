@@ -254,7 +254,7 @@ endfunction
 " Fetch paragraphs to format
 function! s:GetAllParagraphs()
     let content = join(getline(1, '$'), "\n")
-    let paragraphs = split(content, "\n\n")
+    let paragraphs = split(content, '\m\C\n\{2,}')
     return paragraphs
 endfunction
 
@@ -266,22 +266,38 @@ function! s:GetCurrentParagraph()
 endfunction
 
 " ------------------------------------------------------------------------------
-" Main
+" Public functions
 " ------------------------------------------------------------------------------
-function! smt2#parser#ParseAllParagraphs()
-    let s:paragraphs = s:GetAllParagraphs()
+" Note: `input` and `pos` are script-global and accessed by all parsers
+
+function! smt2#parser#ParseCurrentParagraph() abort
+    let s:input = s:GetCurrentParagraph()
+    let s:pos = 0
+
+    let Parser = s:Paragraph()
+    let res = Parser(s:pos)
+
+    if s:debug | call s:PrintAst(res.val) | endif
+    return res.val
+endfunction
+
+function! smt2#parser#ParseAllParagraphs() abort
+    let paragraphs = s:GetAllParagraphs()
 
     let Parser = s:Paragraph()
     let asts = []
-    for s:input in s:paragraphs
+    for s:input in paragraphs
         let s:pos = 0
+
         if s:debug
             echo "\nParagraph\n========="
             echo s:input
             echo "\nParsing\n======="
         endif
-        let res = Parser(0)
+
+        let res = Parser(s:pos)
         call add(asts, res.val)
+
         if s:debug
             echo "\nAST\n==="
             call s:PrintAst(res.val)

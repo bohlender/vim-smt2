@@ -92,21 +92,46 @@ endfunction
 " ------------------------------------------------------------------------------
 " Public functions
 " ------------------------------------------------------------------------------
-function! smt2#formatter#FormatAllParagraphs()
+function! smt2#formatter#FormatCurrentParagraph() abort
+    let cursor = getpos('.')
+    let ast = smt2#parser#ParseCurrentParagraph()
+
+    " Identify on which end of the buffer we are (to fix newlines later)
+    silent! normal! {
+    let is_first_paragraph = line('.') == 1
+    silent! normal! }
+    let is_last_paragraph = line('.') == line('$')
+
+    " Replace paragraph by formatted lines
+    let lines = split(s:Format(ast), '\n')
+    silent! normal! {d}
+    if is_last_paragraph
+        call append('.', [''] + lines)
+    else
+        call append('.', lines + [''])
+    endif
+
+    " Remove potentially introduced first empty line
+    if is_first_paragraph | silent! 1delete | endif
+
+    " Restore cursor position
+    call setpos('.', cursor)
+endfunction
+
+function! smt2#formatter#FormatAllParagraphs() abort
     let cursor = getpos('.')
     let asts = smt2#parser#ParseAllParagraphs()
 
     " Clear buffer & insert formatted paragraphs
-    1,$delete
+    silent! 1,$delete
     for ast in asts
-        let lines = split(s:Format(ast), '\n')
+        let lines = split(s:Format(ast), '\n') + ['']
         call append('$', lines)
-        call append('$', '')
     endfor
 
     " Remove first & trailing empty lines
-    1delete
-    $delete
+    silent! 1delete
+    silent! $delete
 
     " Restore cursor position
     call setpos('.', cursor)
