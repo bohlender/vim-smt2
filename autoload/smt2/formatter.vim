@@ -1,8 +1,19 @@
-" TODO: Document options in readme
+" ------------------------------------------------------------------------------
+" Config
+" ------------------------------------------------------------------------------
+" Length of "short" S-expressions
+if !exists("g:smt2_formatter_short_length")
+    let g:smt2_formatter_short_length = 80
+endif
 
-let g:smt2_formatter_col_limit = 80
-let g:smt2_formatter_indent_str = '  '
+" String to use for indentation
+if !exists("g:smt2_formatter_indent_str")
+    let g:smt2_formatter_indent_str = '  '
+endif
 
+" ------------------------------------------------------------------------------
+" Formatter
+" ------------------------------------------------------------------------------
 function! s:FormatOneLine(ast, in_sexpr = v:false) abort
     if a:ast.kind ==? 'Comment'
         " Comments in a SExpr cannot fit in one line (they consume \n)
@@ -43,7 +54,7 @@ function! s:Format(ast, indent = 0) abort
     elseif a:ast.kind ==? 'SExpr'
         " Short expression -- avoid line breaks
         let oneline_res = s:FormatOneLine(a:ast, v:true)
-        if oneline_res.succ && len(oneline_res.val) < g:smt2_formatter_col_limit
+        if oneline_res.succ && len(oneline_res.val) < g:smt2_formatter_short_length
             return indent_str . oneline_res.val
         endif
 
@@ -79,19 +90,24 @@ function! s:Success(val)
 endfunction
 
 " ------------------------------------------------------------------------------
-" Main
+" Public functions
 " ------------------------------------------------------------------------------
 function! smt2#formatter#FormatAllParagraphs()
     let cursor = getpos('.')
     let asts = smt2#parser#ParseAllParagraphs()
 
-    " TODO: Avoid empty lines at start and end
-    " Clear buffer & insert formatted paragraphs (separated by newline)
-    silent! normal! ggdG
+    " Clear buffer & insert formatted paragraphs
+    1,$delete
     for ast in asts
         let lines = split(s:Format(ast), '\n')
         call append('$', lines)
         call append('$', '')
     endfor
+
+    " Remove first & trailing empty lines
+    1delete
+    $delete
+
+    " Restore cursor position
     call setpos('.', cursor)
 endfunction
