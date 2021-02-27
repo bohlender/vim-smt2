@@ -10,97 +10,96 @@ let s:debug = v:false
 " Generic parser builders
 " ------------------------------------------------------------------------------
 function! s:StartsWith(pattern, OnMatch = {val -> v:none})
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        let cur_pos = matchend(s:input, '\m\C^' . a:pattern, a:pos)
-        if cur_pos == -1
-            return s:Fail(a:pos)
-        endif
-        return s:Success(cur_pos, a:OnMatch(s:input[a:pos:cur_pos-1]))
-    endfunction
-
-    return anon.parser
+        return funcref('ParseStartsWith', [a:pattern, a:OnMatch])
 endfunction
+
+function! ParseStartsWith(pattern, OnMatch, pos) abort
+    let cur_pos = matchend(s:input, '\m\C^' . a:pattern, a:pos)
+    if cur_pos == -1
+        return s:Fail(a:pos)
+    endif
+    return s:Success(cur_pos, a:OnMatch(s:input[a:pos:cur_pos-1]))
+endfunction
+
 
 function! s:Choice(...)
     let parsers = a:000
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        for Parser in parsers
-           let res = Parser(a:pos)
-           if res.succ
-                return s:Success(res.pos, res.val)
-           endif
-        endfor
-        return s:Fail(a:pos)
-    endfunction
-
-    return anon.parser
+    return funcref('ParseChoice', [parsers])
 endfunction
+
+function! ParseChoice(Parsers, pos) abort
+    if s:debug | call s:Debug(a:pos, 'Choice') | endif
+    for Parser in a:Parsers
+       let res = Parser(a:pos)
+       if res.succ
+            return s:Success(res.pos, res.val)
+       endif
+    endfor
+    return s:Fail(a:pos)
+endfunction
+
 
 function! s:Seq(...)
     let parsers = a:000
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        let cur_pos = a:pos
-        let val = []
-        for Parser in parsers
-            let res = Parser(cur_pos)
-            if !res.succ
-                return s:Fail(a:pos)
-            endif
-            let cur_pos = res.pos
-            call add(val, res.val)
-        endfor
-        return s:Success(cur_pos, val)
-    endfunction
-
-    return anon.parser
+    return funcref('ParseSeq', [parsers])
 endfunction
 
-function! s:ZeroOrMore(Parser)
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        let cur_pos = a:pos
-        let val = []
-        while v:true
-            let res = a:Parser(cur_pos)
-            if !res.succ
-                break
-            endif
-            let cur_pos = res.pos
-            call add(val, res.val)
-        endwhile
-        return s:Success(cur_pos, val)
-    endfunction
-
-    return anon.parser
-endfunction
-
-function! s:OneOrMore(Parser)
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        let cur_pos = a:pos
-
-        " Must match once
-        let first_res = a:Parser(cur_pos)
-        if !first_res.succ
+function! ParseSeq(Parsers, pos) abort
+    if s:debug | call s:Debug(a:pos, 'Seq') | endif
+    let cur_pos = a:pos
+    let val = []
+    for Parser in a:Parsers
+        let res = Parser(cur_pos)
+        if !res.succ
             return s:Fail(a:pos)
         endif
-        let cur_pos = first_res.pos
-
-        " Further matches are optional
-        let further_res = s:ZeroOrMore(a:Parser)(cur_pos)
-        return s:Success(further_res.pos, [first_res.val] + further_res.val)
-    endfunction
-
-    return anon.parser
+        let cur_pos = res.pos
+        call add(val, res.val)
+    endfor
+    return s:Success(cur_pos, val)
 endfunction
+
+
+function! s:ZeroOrMore(Parser)
+    return funcref('ParseZeroOrMore', [a:Parser])
+endfunction
+
+function! ParseZeroOrMore(Parser, pos) abort
+    if s:debug | call s:Debug(a:pos, 'ParseZeroOrMore') | endif
+    let cur_pos = a:pos
+    let val = []
+    while v:true
+        let res = a:Parser(cur_pos)
+        if !res.succ
+            break
+        endif
+        let cur_pos = res.pos
+        call add(val, res.val)
+    endwhile
+    return s:Success(cur_pos, val)
+endfunction
+
+
+function! s:OneOrMore(Parser)
+    return funcref('ParseOneOrMore', [a:Parser])
+endfunction
+
+function! ParseOneOrMore(Parser, pos) abort
+    if s:debug | call s:Debug(a:pos, 'ParseOneOrMore') | endif
+    let cur_pos = a:pos
+
+    " Must match once
+    let first_res = a:Parser(cur_pos)
+    if !first_res.succ
+        return s:Fail(a:pos)
+    endif
+    let cur_pos = first_res.pos
+
+    " Further matches are optional
+    let further_res = s:ZeroOrMore(a:Parser)(cur_pos)
+    return s:Success(further_res.pos, [first_res.val] + further_res.val)
+endfunction
+
 
 " ------------------------------------------------------------------------------
 " Specific parsers
@@ -111,109 +110,101 @@ endfunction
 " Atom      ::= quoted | symbol
 
 function! s:LParen()
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        if s:debug | call s:Debug(a:pos, 'LParen()') | endif
-        let Parser = s:StartsWith('\_s*(')
-        return Parser(a:pos)
-    endfunction
-
-    return anon.parser
+    return funcref('ParseLParen')
 endfunction
+
+function! ParseLParen(pos) abort
+    if s:debug | call s:Debug(a:pos, 'LParen') | endif
+    let Parser = s:StartsWith('\_s*(')
+    return Parser(a:pos)
+endfunction
+
 
 function! s:RParen()
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        if s:debug | call s:Debug(a:pos, 'RParen()') | endif
-        let Parser = s:StartsWith('\_s*)')
-        return Parser(a:pos)
-    endfunction
-
-    return anon.parser
+    return funcref('ParseRParen')
 endfunction
+
+function! ParseRParen(pos) abort
+    if s:debug | call s:Debug(a:pos, 'RParen') | endif
+    let Parser = s:StartsWith('\_s*)')
+    return Parser(a:pos)
+endfunction
+
 
 function! s:Paragraph()
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        if s:debug | call s:Debug(a:pos, 'Paragraph()') | endif
-        let Parser = s:OneOrMore(s:Choice(s:Comment(), s:SExpr()))
-        let res = Parser(a:pos)
-        if res.succ
-            let res.val = s:AST('Paragraph', res.val)
-        endif
-        return res
-    endfunction
-
-    return anon.parser
+    return funcref('ParseParagraph')
 endfunction
 
-" TODO: Make sure '\n' linebreaks in regex works on windows/other encodings
+function! ParseParagraph(pos) abort
+    if s:debug | call s:Debug(a:pos, 'Paragraph') | endif
+    let Parser = s:OneOrMore(s:Choice(s:Comment(), s:SExpr()))
+    let res = Parser(a:pos)
+    if res.succ
+        let res.val = s:AST('Paragraph', res.val)
+    endif
+    return res
+endfunction
+
+
+" TODO: Make sure "\n" linebreak in regex works on windows / with other encodings
 function! s:Comment()
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        if s:debug | call s:Debug(a:pos, 'Comment()') | endif
-        let Parser = s:StartsWith('\_s*;[^\n]*', {val -> s:AST('Comment', trim(val))})
-        return Parser(a:pos)
-    endfunction
-
-    return anon.parser
+    return funcref('ParseComment')
 endfunction
+
+function! ParseComment(pos) abort
+    if s:debug | call s:Debug(a:pos, 'Comment') | endif
+    let Parser = s:StartsWith('\_s*;[^\n]*', {val -> s:AST('Comment', trim(val))})
+    return Parser(a:pos)
+endfunction
+
 
 function! s:SExpr()
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        if s:debug | call s:Debug(a:pos, 'SExpr()') | endif
-        let Parser = s:Seq(s:LParen(), s:ZeroOrMore(s:Expr()), s:RParen())
-        let res = Parser(a:pos)
-
-        " Ignore parens; return the Expr list
-        if res.succ
-            let res.val = s:AST('SExpr', res.val[1])
-        endif
-        return res
-    endfunction
-
-    return anon.parser
+    return funcref('ParseSExpr')
 endfunction
+
+function! ParseSExpr(pos) abort
+    if s:debug | call s:Debug(a:pos, 'SExpr') | endif
+    let Parser = s:Seq(s:LParen(), s:ZeroOrMore(s:Expr()), s:RParen())
+    let res = Parser(a:pos)
+
+    " Ignore parens; return the Expr list
+    if res.succ
+        let res.val = s:AST('SExpr', res.val[1])
+    endif
+    return res
+endfunction
+
 
 function! s:Expr()
-    let anon = {}
-
-    function! anon.parser(pos) closure abort
-        if s:debug | call s:Debug(a:pos, 'Expr()') | endif
-        let Parser = s:Choice(s:Comment(), s:SExpr(), s:Atom())
-        return Parser(a:pos)
-    endfunction
-
-    return anon.parser
+    return funcref('ParseExpr')
 endfunction
 
+function! ParseExpr(pos) abort
+    if s:debug | call s:Debug(a:pos, 'Expr') | endif
+    let Parser = s:Choice(s:Comment(), s:SExpr(), s:Atom())
+    return Parser(a:pos)
+endfunction
+
+
 function! s:Atom()
-    let anon = {}
+    return funcref('ParseAtom')
+endfunction
 
-    function! anon.parser(pos) closure abort
-        if s:debug | call s:Debug(a:pos, 'Atom()') | endif
+function! ParseAtom(pos) abort
+    if s:debug | call s:Debug(a:pos, 'Atom') | endif
 
-        " Quoted string (may even contain '(' or ')')
-        let Quoted = s:StartsWith('\_s*".*"', {val -> trim(val)})
+    " Quoted string (may even contain '(' or ')')
+    let Quoted = s:StartsWith('\_s*".*"', {val -> trim(val)})
 
-        " All but whitespace, '(' or ')'
-        let Symbol = s:StartsWith('\_s*[^[:space:]()]\+', {val -> trim(val)})
+    " All but whitespace, '(' or ')'
+    let Symbol = s:StartsWith('\_s*[^[:space:]()]\+', {val -> trim(val)})
 
-        let Parser = s:Choice(Quoted, Symbol)
-        let res = Parser(a:pos)
-        if res.succ
-            let res.val = s:AST('Atom', res.val)
-        endif
-        return res
-    endfunction
-
-    return anon.parser
+    let Parser = s:Choice(Quoted, Symbol)
+    let res = Parser(a:pos)
+    if res.succ
+        let res.val = s:AST('Atom', res.val)
+    endif
+    return res
 endfunction
 
 " ------------------------------------------------------------------------------
