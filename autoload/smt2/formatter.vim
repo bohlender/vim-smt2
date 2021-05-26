@@ -1,109 +1,113 @@
-" ------------------------------------------------------------------------------
-" Config
-" ------------------------------------------------------------------------------
-" Length of "short" S-expressions
+vim9script
+
+# TODO: Refer to token kind by name, e.g. token_comment instead of 8
+
+# ------------------------------------------------------------------------------
+# Config
+# ------------------------------------------------------------------------------
+# Length of "short" S-expressions
 if !exists("g:smt2_formatter_short_length")
-    let g:smt2_formatter_short_length = 80
+    g:smt2_formatter_short_length = 80
 endif
 
-" String to use for indentation
+# String to use for indentation
 if !exists("g:smt2_formatter_indent_str")
-    let g:smt2_formatter_indent_str = '  '
+    g:smt2_formatter_indent_str = '  '
 endif
 
-" ------------------------------------------------------------------------------
-" Formatter
-" ------------------------------------------------------------------------------
-function! s:FormatOneLine(ast, in_sexpr = v:false) abort
-    if a:ast.kind ==? 'Comment'
-        " Comments in a SExpr cannot fit in one line (they consume \n)
-        if a:in_sexpr
-            return s:Fail()
+# ------------------------------------------------------------------------------
+# Format status
+# ------------------------------------------------------------------------------
+def Fail(): dict<any>
+    return {success: false}
+enddef
+
+def Success(str: string): dict<any>
+    return {success: true, str: str}
+enddef
+
+# ------------------------------------------------------------------------------
+# Formatter
+# ------------------------------------------------------------------------------
+def FormatOneLine(ast: dict<any>, in_sexpr = false): dict<any>
+    if ast.kind ==# 'Atom'
+        # An SExpr containing a comment cannot be formatted in one line
+        if ast.value.kind == 8 && in_sexpr
+            return Fail()
         endif
-        return s:Success(a:ast.value)
-    elseif a:ast.kind ==? 'Atom'
-        return s:Success(a:ast.value)
-    elseif a:ast.kind ==? 'SExpr'
-        let formatted = []
-        for expr in a:ast.value
-            let res = s:FormatOneLine(expr, v:true)
-            if !res.succ
-                return s:Fail()
+        return Success(ast.value.lexeme)
+    elseif ast.kind ==# 'SExpr'
+        var formatted = []
+        for expr in ast.value
+            const res = expr->FormatOneLine(true)
+            if !res.success
+                return Fail()
             endif
-            call add(formatted, res.val)
+            formatted->add(res.str)
         endfor
-        return s:Success('(' . join(formatted, ' ') . ')')
-    elseif a:ast.kind ==? 'Paragraph'
-        " Multi-line paragraph cannot fit on one line
-        if len(a:ast.value) != 1
-            return s:Fail()
+        return Success('(' .. formatted->join(' ') .. ')')
+    elseif ast.kind ==# 'Paragraph'
+        # A paragraph with several entries should not be formatted in one line
+        if len(ast.value) != 1
+            return Fail()
         endif
-        return s:FormatOneLine(a:ast.value[0])
-    else
-        echoerr 'Cannot format AST node: ' . string(a:ast)
+        return ast.value[0]->FormatOneLine()
     endif
-endfunction
+    throw 'Cannot format AST node: ' .. string(ast)
+    return {} # Unreachable
+enddef
 
-function! s:Format(ast, indent = 0) abort
-    let indent_str = repeat(g:smt2_formatter_indent_str, a:indent)
+def Format(ast: dict<any>, indent = 0): string
+    const indent_str = repeat(g:smt2_formatter_indent_str, indent)
 
-    if a:ast.kind ==? 'Comment'
-        return indent_str . a:ast.value
-    elseif a:ast.kind ==? 'Atom'
-        return indent_str . a:ast.value
-    elseif a:ast.kind ==? 'SExpr'
-        " Short expression -- avoid line breaks
-        let oneline_res = s:FormatOneLine(a:ast, v:true)
-        if oneline_res.succ && len(oneline_res.val) < g:smt2_formatter_short_length
-            return indent_str . oneline_res.val
+    if ast.kind ==# 'Atom'
+        return indent_str .. ast.value.lexeme
+    elseif ast.kind ==# 'SExpr'
+        # Short expression -- avoid line breaks
+        const oneline_res = ast->FormatOneLine(true)
+        if oneline_res.success && len(oneline_res.str) < g:smt2_formatter_short_length
+            return indent_str .. oneline_res.str
         endif
 
-        " Long expression -- break lines and indent subexpressions.
-        " Don't break before first subexpression if it's a comment or atom
-        let formatted = []
-        if (a:ast.value[0].kind ==? 'Comment' || a:ast.value[0].kind ==? 'Atom')
-            call add(formatted, s:Format(a:ast.value[0], 0))
+        # Long expression -- break lines and indent subexpressions.
+        # Don't break before first subexpression if it's an atom
+        # Note: ast.value->empty() == false; otherwise it would fit in one line
+        var formatted = []
+        if (ast.value[0].kind ==# 'Atom')
+            call formatted->add(ast.value[0]->Format(0))
         else
-            call add(formatted, "\n" . s:Format(a:ast.value[0], a:indent+1))
+            call formatted->add("\n" .. ast.value[0]->Format(indent + 1))
         endif
-        for child in a:ast.value[1:]
-            call add(formatted, s:Format(child, a:indent+1))
+        for child in ast.value[1 :]
+            call formatted->add(child->Format(indent + 1))
         endfor
-        return indent_str . "(" . join(formatted, "\n") . ")"
-    elseif a:ast.kind ==? 'Paragraph'
-        let formatted = []
-        for child in a:ast.value
-            call add(formatted, s:Format(child))
+        return indent_str .. "(" .. formatted->join("\n") .. ")"
+    elseif ast.kind ==# 'Paragraph'
+        var formatted = []
+        for child in ast.value
+            call formatted->add(child->Format())
         endfor
-        return join(formatted, "\n")
-    else
-        echoerr 'Cannot format AST node: ' . string(a:ast)
+        return formatted->join("\n")
     endif
-endfunction
+    throw 'Cannot format AST node: ' .. string(ast)
+    return '' # Unreachable
+enddef
 
-function! s:Fail()
-    return {'succ': v:false}
-endfunction
+# ------------------------------------------------------------------------------
+# Public functions
+# ------------------------------------------------------------------------------
+def smt2#formatter#FormatCurrentParagraph()
+    const cursor = getpos('.')
+    const ast = smt2#parser#ParseCurrentParagraph()
 
-function! s:Success(val)
-    return {'succ': v:true, 'val': a:val}
-endfunction
-
-" ------------------------------------------------------------------------------
-" Public functions
-" ------------------------------------------------------------------------------
-function! smt2#formatter#FormatCurrentParagraph() abort
-    let cursor = getpos('.')
-    let ast = smt2#parser#ParseCurrentParagraph()
-
-    " Identify on which end of the buffer we are (to fix newlines later)
+    # Identify on which end of the buffer we are (to fix newlines later)
     silent! normal! {
-    let is_first_paragraph = line('.') == 1
+    const is_first_paragraph = line('.') == 1
     silent! normal! }
-    let is_last_paragraph = line('.') == line('$')
+    const is_last_paragraph = line('.') == line('$')
 
-    " Replace paragraph by formatted lines
-    let lines = split(s:Format(ast), '\n')
+    # Replace paragraph by formatted lines
+    const lines = split(s:Format(ast), '\n')
     silent! normal! {d}
     if is_last_paragraph
         call append('.', [''] + lines)
@@ -111,28 +115,28 @@ function! smt2#formatter#FormatCurrentParagraph() abort
         call append('.', lines + [''])
     endif
 
-    " Remove potentially introduced first empty line
-    if is_first_paragraph | silent! 1delete | endif
+    # Remove potentially introduced first empty line
+    if is_first_paragraph | silent! :1delete | endif
 
-    " Restore cursor position
+    # Restore cursor position
     call setpos('.', cursor)
-endfunction
+enddef
 
-function! smt2#formatter#FormatAllParagraphs() abort
-    let cursor = getpos('.')
-    let asts = smt2#parser#ParseAllParagraphs()
+def smt2#formatter#FormatAllParagraphs()
+    const cursor = getpos('.')
+    const asts = smt2#parser#ParseAllParagraphs()
 
-    " Clear buffer & insert formatted paragraphs
-    silent! 1,$delete
+    # Clear buffer & insert formatted paragraphs
+    silent! :1,$delete
     for ast in asts
-        let lines = split(s:Format(ast), '\n') + ['']
+        const lines = split(s:Format(ast), '\n') + ['']
         call append('$', lines)
     endfor
 
-    " Remove first & trailing empty lines
-    silent! 1delete
-    silent! $delete
+    # Remove first & trailing empty lines
+    silent! :1delete
+    silent! :$delete
 
-    " Restore cursor position
+    # Restore cursor position
     call setpos('.', cursor)
-endfunction
+enddef
