@@ -1,5 +1,5 @@
 vim9script
-const debug = true
+const debug = false
 set maxfuncdepth=100000000 # SMT files tend to be highly nested
 
 # TODO: Make parse status a boolean
@@ -10,22 +10,40 @@ set maxfuncdepth=100000000 # SMT files tend to be highly nested
 # TODO: Change Ast.kind type from string to enum/number?
 
 # ------------------------------------------------------------------------------
-# AST nodes (essentially named token wrappers)
+# AST nodes -- essentially named token wrappers
+#
+# Note: pos_from, pos_to and contains_comment are introduced to allow for a fast
+#       FitsOneLine(ast) function in the formatter.
+#       Here, pos_from and pos_to refer to indices of characters -- not tokens
 # ------------------------------------------------------------------------------
-def Ast(kind: string, value: any): dict<any>
-    return {kind: kind, value: value}
+def Ast(kind: string, value: any, pos_from: number, pos_to: number, contains_comment: bool): dict<any>
+    return {kind: kind, value: value, pos_from: pos_from, pos_to: pos_to, contains_comment: contains_comment}
 enddef
 
-def ParagraphAst(tokens: list<dict<any>>): dict<any>
-    return Ast('Paragraph', tokens)
+def ParagraphAst(exprs: list<dict<any>>, pos_from: number, pos_to: number): dict<any>
+    var contains_comment = false
+    for expr in exprs
+        if expr.contains_comment
+            contains_comment = true
+            break
+        endif
+    endfor
+    return Ast('Paragraph', exprs, pos_from, pos_to, contains_comment)
 enddef
 
-def SExprAst(tokens: list<dict<any>>): dict<any>
-    return Ast('SExpr', tokens)
+def SExprAst(exprs: list<dict<any>>, pos_from: number, pos_to: number): dict<any>
+    var contains_comment = false
+    for expr in exprs
+        if expr.contains_comment
+            contains_comment = true
+            break
+        endif
+    endfor
+    return Ast('SExpr', exprs, pos_from, pos_to, contains_comment)
 enddef
 
 def AtomAst(token: dict<any>): dict<any>
-    return Ast('Atom', token)
+    return Ast('Atom', token, token.pos, token.pos + len(token.lexeme), token.kind == 8)
 enddef
 
 def PrintAst(ast: dict<any>, indent = 0)
@@ -145,7 +163,9 @@ def ParseSExpr(tokens: list<dict<any>>, pos: number): dict<any>
         return Fail(pos)
     endif
 
-    return Success(res.pos, SExprAst(exprs))
+    const pos_from = tokens[pos].pos
+    const pos_to = tokens[cur_pos].pos + 1
+    return Success(res.pos, SExprAst(exprs, pos_from, pos_to))
 enddef
 
 def ParseParagraph(tokens: list<dict<any>>, pos = 0): dict<any>
@@ -166,7 +186,10 @@ def ParseParagraph(tokens: list<dict<any>>, pos = 0): dict<any>
     if !matched
         return Fail(pos)
     endif
-    return Success(cur_pos, ParagraphAst(exprs))
+
+    const pos_from = tokens[pos].pos
+    const pos_to = tokens[cur_pos - 1].pos + len(tokens[cur_pos - 1].lexeme)
+    return Success(cur_pos, ParagraphAst(exprs, pos_from, pos_to))
 enddef
 
 # ------------------------------------------------------------------------------

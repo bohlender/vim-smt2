@@ -29,32 +29,30 @@ enddef
 # ------------------------------------------------------------------------------
 # Formatter
 # ------------------------------------------------------------------------------
-def FormatOneLine(ast: dict<any>, in_sexpr = false): dict<any>
+def FitsOneLine(ast: dict<any>): bool
+    # A paragraph with several entries should not be formatted in one line
+    if ast.kind ==# 'Paragraph' && len(ast.value) != 1
+        return false
+    endif
+    return ast.pos_to - ast.pos_from < g:smt2_formatter_short_length && !ast.contains_comment
+enddef
+
+def FormatOneLine(ast: dict<any>): string
+    # TODO: Assert FitsOneLine
+    
     if ast.kind ==# 'Atom'
-        # An SExpr containing a comment cannot be formatted in one line
-        if ast.value.kind == 8 && in_sexpr
-            return Fail()
-        endif
-        return Success(ast.value.lexeme)
+        return ast.value.lexeme
     elseif ast.kind ==# 'SExpr'
         var formatted = []
         for expr in ast.value
-            const res = expr->FormatOneLine(true)
-            if !res.success
-                return Fail()
-            endif
-            formatted->add(res.str)
+            call formatted->add(expr->FormatOneLine())
         endfor
-        return Success('(' .. formatted->join(' ') .. ')')
+        return '(' .. formatted->join(' ') .. ')'
     elseif ast.kind ==# 'Paragraph'
-        # A paragraph with several entries should not be formatted in one line
-        if len(ast.value) != 1
-            return Fail()
-        endif
         return ast.value[0]->FormatOneLine()
     endif
     throw 'Cannot format AST node: ' .. string(ast)
-    return {} # Unreachable
+    return '' # Unreachable
 enddef
 
 def Format(ast: dict<any>, indent = 0): string
@@ -64,9 +62,8 @@ def Format(ast: dict<any>, indent = 0): string
         return indent_str .. ast.value.lexeme
     elseif ast.kind ==# 'SExpr'
         # Short expression -- avoid line breaks
-        const oneline_res = ast->FormatOneLine(true)
-        if oneline_res.success && len(oneline_res.str) < g:smt2_formatter_short_length
-            return indent_str .. oneline_res.str
+        if ast->FitsOneLine()
+            return indent_str .. ast->FormatOneLine()
         endif
 
         # Long expression -- break lines and indent subexpressions.
@@ -107,7 +104,7 @@ def smt2#formatter#FormatCurrentParagraph()
     const is_last_paragraph = line('.') == line('$')
 
     # Replace paragraph by formatted lines
-    const lines = split(s:Format(ast), '\n')
+    const lines = split(Format(ast), '\n')
     silent! normal! {d}
     if is_last_paragraph
         call append('.', [''] + lines)
@@ -129,7 +126,7 @@ def smt2#formatter#FormatAllParagraphs()
     # Clear buffer & insert formatted paragraphs
     silent! :1,$delete
     for ast in asts
-        const lines = split(s:Format(ast), '\n') + ['']
+        const lines = split(Format(ast), '\n') + ['']
         call append('$', lines)
     endfor
 
