@@ -11,8 +11,8 @@ Besides the base SMT-LIB2 language, this plugin also **supports the extensions o
 *Note: To provide a familiar experience, the syntax highlighting is directly derived from the source of [Z3's online demo](https://rise4fun.com/Z3/).*
 
 The following shortcuts work **without an SMT solver** being installed:
-* `<localleader>f` auto-formats the current paragraph
-* `<localleader>F` auto-formats the current buffer/file
+* `<localleader>f` auto-formats the current paragraph (uses `vim9script` and requires VIM >= v8.2)
+* `<localleader>F` auto-formats the current buffer/file (uses `vim9script` and requires VIM >= v8.2)
 
 The plugin also provides shortcuts for **evaluating the current file using an SMT solver** of your choice (*defaults to [Z3](https://github.com/Z3Prover/z3) or [boolector](http://fmv.jku.at/boolector)*):
 * `<localleader>r` evaluates the current file (in a terminal)
