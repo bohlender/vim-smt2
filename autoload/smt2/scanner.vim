@@ -17,6 +17,7 @@ const token_string = 5
 const token_symbol = 6
 const token_keyword = 7
 const token_comment = 8
+const token_eof = 9
 
 def Token(kind: number, pos: number, lexeme: string): dict<any>
     return {kind: kind, pos: pos, lexeme: lexeme}
@@ -41,81 +42,100 @@ def TokenKind2Str(kind: number): string
         return "Keyword"
     elseif kind == token_comment
         return "Comment"
+    elseif kind == token_eof
+        return "EOF"
     else
         echoerr "Unexpected token kind: " .. kind # TODO: throw?
         return ''
     endif
 enddef
 
-def PrettyPrint(tokens: list<dict<any>>)
-    def Rank(lhs: dict<any>, rhs: dict<any>): number
-        return lhs.pos - rhs.pos
-    enddef
-
-    echo printf("%4s %8s %s", 'pos', 'kind', 'lexeme')
-    for token in copy(tokens)->sort(Rank)
-        echo printf("%4d %8s %s", token.pos, token.kind->TokenKind2Str(), token.lexeme)
-    endfor
-    echo "\n"
+def PrettyPrint(token: dict<any>)
+    echo printf("%4d %8s %s", token.pos, token.kind->TokenKind2Str(), token.lexeme)
 enddef
 
 # ------------------------------------------------------------------------------
 # Scanner
+#
+# Note: The public interface is limited to the
+#       - field cur_token
+#       - method NextToken
+#       - field at_new_paragraph (needed to maintain paragrahps in formatting)
+#
+#       The other fields should only be used internally / in this file
 # ------------------------------------------------------------------------------
-# TODO: Return token stream? Is a bit faster but complicates backtracking
-# TODO: Add linenr to scanner
+# TODO: Add linenr to scanner?
 # TODO: Enforce restriction to ASCII? We should if we use the lookup table below
-def Scanner(source: string): dict<any>
-    return {
-        chars: source->split('\zs'),
-        pos: 0,
-        at_eof: source->empty(),
-        cur_char: source[0],
-        cur_char_nr: source[0]->char2nr(),
-        chars_len: strchars(source)}
+# TODO: Do not take a string but a character stream (or just buffer and pos)?
+
+def smt2#scanner#Scanner(source: string): dict<any>
+    var scanner = {
+        chars: source->trim(" \t\n\r", 2)->split('\zs'),
+        pos: 0, at_new_paragraph: false}
+
+    if scanner.chars->empty()
+        scanner.at_eof = true
+        scanner.cur_char = ''
+    else
+        scanner.at_eof = false
+        scanner.cur_char = scanner.chars[0]
+    endif
+    scanner.cur_char_nr = scanner.cur_char->char2nr()
+    scanner.chars_len = len(scanner.chars)
+    scanner.cur_token = {}
+    scanner->smt2#scanner#NextToken()
+    return scanner
 enddef
 
-def Scan(source: string): list<dict<any>>
-    if source->empty()
-        return []
+def smt2#scanner#NextToken(scanner: dict<any>)
+    if scanner.at_eof
+        scanner.cur_token = Token(token_eof, scanner.pos, '')
+    else
+        scanner->SkipWhitespace() # Cannot end up at eof since end is trimmed
+
+        const nr = scanner.cur_char_nr
+        if nr == 40 # '('
+            scanner.cur_token = Token(token_lparen, scanner.pos, '(')
+            scanner->NextPos()
+        elseif nr == 41 # ')'
+            scanner.cur_token = Token(token_rparen, scanner.pos, ')')
+            scanner->NextPos()
+        elseif nr->IsStartOfSimpleSymbol()
+            scanner.cur_token = scanner->ReadSimpleSymbol()
+        elseif nr == 124 # '|'
+            scanner.cur_token = scanner->ReadQuotedSymbol()
+        elseif nr == 58 # ':'
+            scanner.cur_token = scanner->ReadKeyword()
+        elseif nr->IsDigit()
+            scanner.cur_token = scanner->ReadNumber()
+        elseif nr == 35 # '#'
+            scanner.cur_token = scanner->ReadBv()
+        elseif nr == 34 # '"'
+            scanner.cur_token = scanner->ReadString()
+        elseif nr == 59 # ';'
+            scanner.cur_token = scanner->ReadComment()
+        else
+            scanner->Enforce(false, printf("unexpected character '%s'", scanner.cur_char))
+        endif
     endif
 
-    var scanner = Scanner(source)
-    var tokens = []
-    while !scanner.at_eof
-        const c = scanner.cur_char
-        const nr = scanner.cur_char_nr
+    if debug
+        if scanner.at_new_paragraph | echo "\n" | endif
+        scanner.cur_token->PrettyPrint()
+    endif
+enddef
 
-        if nr->IsWhitespace()
-            scanner->Next()
-        elseif c == '('
-            tokens->add(Token(token_lparen, scanner.pos, '('))
-            scanner->Next()
-        elseif c == ')'
-            tokens->add(Token(token_rparen, scanner.pos, ')'))
-            scanner->Next()
-        elseif nr->IsStartOfSimpleSymbol()
-            tokens->add(scanner->ReadSimpleSymbol())
-        elseif c == '|'
-            tokens->add(scanner->ReadQuotedSymbol())
-        elseif c == ':'
-            tokens->add(scanner->ReadKeyword())
-        elseif nr->IsDigit()
-            tokens->add(scanner->ReadNumber())
-        elseif c == '#'
-            tokens->add(scanner->ReadBv())
-        elseif c == '"'
-            tokens->add(scanner->ReadString())
-        elseif c == ';'
-            tokens->add(scanner->ReadComment())
-        else
-            scanner->Enforce(false, printf("unexpected character '%s'", c))
-        endif
+# TODO: Remove once parser works without backtracking
+def smt2#scanner#GetAllTokens(scanner: dict<any>): list<dict<any>>
+    var tokens = []
+    while scanner.cur_token.kind != token_eof
+        tokens->add(scanner.cur_token)
+        scanner->smt2#scanner#NextToken()
     endwhile
     return tokens
 enddef
 
-def Next(scanner: dict<any>)
+def NextPos(scanner: dict<any>)
     if debug | scanner->Enforce(!scanner.at_eof, "Already at EOF") | endif
 
     scanner.pos += 1
@@ -132,23 +152,45 @@ enddef
 
 # ------------------------------------------------------------------------------
 # <white_space_char> ::= 9 (tab), 10 (lf), 13 (cr), 32 (space)
+#
+# TODO: Verify claim
+# Note: Our input string joins all lines by "\n" so "\r" can be ignored
 # ------------------------------------------------------------------------------
-def IsWhitespace(char_nr: number): bool
-    return char_nr == 32 || char_nr == 9 || char_nr == 10 || char_nr == 13
+#def IsWhitespace(char_nr: number): bool
+#    return char_nr == 32 || char_nr == 9 || char_nr == 10 || char_nr == 13
+#enddef
+
+def SkipWhitespace(scanner: dict<any>)
+    var newlines = 0
+    while !scanner.at_eof
+        const nr = scanner.cur_char_nr
+        if nr == 32 || nr == 9
+            scanner->NextPos()
+        elseif nr == 10
+            newlines += 1
+            scanner->NextPos()
+        else
+            break
+        endif
+    endwhile
+    scanner.at_new_paragraph = newlines > 1
 enddef
 
 # ------------------------------------------------------------------------------
 # A comment is any character sequence not contained within a string literal or a
 # quoted symbol that begins with ; and ends with the first subsequent
 # line-breaking character, i.e. 10 (lf) or 13 (cr)
+#
+# TODO: Verify claim
+# Note: Our input string joins all lines by "\n" so "\r" can be ignored
 # ------------------------------------------------------------------------------
 def ReadComment(scanner: dict<any>): dict<any>
     if debug | scanner->Enforce(scanner.cur_char == ';', "Not the start of a comment") | endif
 
     const start_pos = scanner.pos
-    scanner->Next()
-    while !scanner.at_eof && scanner.cur_char_nr != 10 && scanner.cur_char_nr != 13
-        scanner->Next()
+    scanner->NextPos()
+    while !scanner.at_eof && scanner.cur_char_nr != 10
+        scanner->NextPos()
     endwhile
     return Token(token_comment, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
@@ -169,7 +211,7 @@ def ReadNumber(scanner: dict<any>): dict<any>
 
     const starts_with_zero = scanner.cur_char == '0'
     const start_pos = scanner.pos
-    scanner->Next()
+    scanner->NextPos()
     # TODO: Be strict about numbers not starting with 0 when not debugging?
     if debug | scanner->Enforce(!starts_with_zero || scanner.cur_char != '0', "Numeral may not start with 0") | endif
 
@@ -177,13 +219,13 @@ def ReadNumber(scanner: dict<any>): dict<any>
     while !scanner.at_eof
         const nr = scanner.cur_char_nr
         if 48 <= nr && nr <= 57 # inlined IsDigit
-            scanner->Next()
+            scanner->NextPos()
         elseif scanner.cur_char == '.'
             if is_decimal
                 break
             else
                 is_decimal = true
-                scanner->Next()
+                scanner->NextPos()
             endif
         else
             break
@@ -216,21 +258,21 @@ def ReadBv(scanner: dict<any>): dict<any>
     if debug | scanner->Enforce(scanner.cur_char == '#', "Not the start of a bit vector literal") | endif
 
     const start_pos = scanner.pos
-    scanner->Next()
+    scanner->NextPos()
     if scanner.cur_char == 'x'
-        scanner->Next()
+        scanner->NextPos()
         scanner->Enforce(!scanner.at_eof && is_alphanumeric_char_nr[scanner.cur_char_nr],
             "hexadecimal literal may not be empty")
         while !scanner.at_eof && is_alphanumeric_char_nr[scanner.cur_char_nr]
-            scanner->Next()
+            scanner->NextPos()
         endwhile
     elseif scanner.cur_char == 'b'
-        scanner->Next()
+        scanner->NextPos()
         # '0'->char2nr() == 48 && '1'->char2nr() == 49
         scanner->Enforce(!scanner.at_eof && scanner.cur_char_num == 48 || scanner.cur_char_num == 49,
             "binary literal may not be empty")
         while !scanner.at_eof && scanner.cur_char_num == 48 || scanner.cur_char_num == 49
-            scanner->Next()
+            scanner->NextPos()
         endwhile
     else
         scanner->Enforce(false, "invalid bit vector literal -- expected 'x' or 'b'")
@@ -248,19 +290,19 @@ def ReadString(scanner: dict<any>): dict<any>
     if debug | scanner->Enforce(scanner.cur_char == '"', "Not the start of a string") | endif
 
     const start_pos = scanner.pos
-    scanner->Next()
+    scanner->NextPos()
     while true
         scanner->Enforce(!scanner.at_eof, "unexpected end of string")
 
         if scanner.cur_char == '"'
-            scanner->Next()
+            scanner->NextPos()
             if scanner.cur_char != '"'
-                return Token(token_string, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+                break
             endif
         endif
-        scanner->Next()
+        scanner->NextPos()
     endwhile
-    return {} # Unreachable
+    return Token(token_string, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
@@ -290,9 +332,9 @@ def ReadSimpleSymbol(scanner: dict<any>): dict<any>
     if debug | scanner->Enforce(scanner.cur_char_nr->IsStartOfSimpleSymbol(), "Not the start of a simple symbol") | endif
 
     const start_pos = scanner.pos
-    scanner->Next()
+    scanner->NextPos()
     while !scanner.at_eof && is_simple_symbol_char_nr[scanner.cur_char_nr]
-        scanner->Next()
+        scanner->NextPos()
     endwhile
     return Token(token_symbol, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
@@ -307,13 +349,16 @@ def ReadQuotedSymbol(scanner: dict<any>): dict<any>
     if debug | scanner->Enforce(scanner.cur_char == '|', "Not the start of a quoted symbol") | endif
 
     const start_pos = scanner.pos
-    scanner->Next()
-    while scanner.cur_char != '|'
+    scanner->NextPos()
+    while true
         scanner->Enforce(!scanner.at_eof, "unexpected end of quoted symbol")
         scanner->Enforce(scanner.cur_char != '\\', "quoted symbol may not contain '\'")
-        scanner->Next()
+        if scanner.cur_char == '|'
+            break
+        endif
+        scanner->NextPos()
     endwhile
-    scanner->Next()
+    scanner->NextPos()
     return Token(token_symbol, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
@@ -324,19 +369,29 @@ def ReadKeyword(scanner: dict<any>): dict<any>
     if debug | scanner->Enforce(scanner.cur_char == ':', "Not the start of a keyword") | endif
 
     const start_pos = scanner.pos
-    scanner->Next()
+    scanner->NextPos()
     while !scanner.at_eof && is_simple_symbol_char_nr[scanner.cur_char_nr]
-        scanner->Next()
+        scanner->NextPos()
     endwhile
     return Token(token_keyword, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
-# Public functions
+# DEBUG
 # ------------------------------------------------------------------------------
-def smt2#scanner#ScanSource(source: string): list<dict<any>>
-    const tokens = Scan(source)
-
-    if debug | tokens->PrettyPrint() | endif
-    return tokens
-enddef
+#const file = '/home/bohlender/Dropbox/PyCharmProjects/smt-format/input/test_short.smt2'
+#const file = '/home/bohlender/Dropbox/PyCharmProjects/smt-format/input/amotsa_50p.smt2' # 0.077
+#const file = '/home/bohlender/Dropbox/PyCharmProjects/smt-format/input/amotsa.smt2' # 0.29
+#const file = '/home/bohlender/Dropbox/PyCharmProjects/smt-format/input/amebsa.smt2' # 0.84
+#const file = '/home/bohlender/Dropbox/PyCharmProjects/smt-format/input/append_fs_unsafe.c.smt2' #7.14 7.45 7.16 7.08 7.17
+#
+#def Dbg()
+#    const source = readfile(file)->join("\n")
+#    const t_start = reltime()
+#    var scanner = source->smt2#scanner#Scanner()
+#    while !scanner.at_eof
+#        scanner->smt2#scanner#NextToken()
+#    endwhile
+#    echo printf('Took %s', reltimestr(reltime(t_start)))
+#enddef
+#call Dbg()

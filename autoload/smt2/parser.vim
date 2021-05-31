@@ -1,5 +1,5 @@
 vim9script
-const debug = false
+const debug = true
 set maxfuncdepth=100000000 # SMT files tend to be highly nested
 
 # TODO: Make parse status a boolean
@@ -202,9 +202,10 @@ def GetAllParagraphs(): list<string>
     return paragraphs
 enddef
 
+# TODO: Rename -- start of paragraph till eof
 def GetCurrentParagraph(): string
     const cursor = getpos('.')
-    silent! normal! {"0y}
+    silent! normal! {"0yG
     call setpos('.', cursor)
     return trim(@0)
 enddef
@@ -214,8 +215,18 @@ enddef
 # ------------------------------------------------------------------------------
 def smt2#parser#ParseCurrentParagraph(): dict<any>
     const source = GetCurrentParagraph()
-    const tokens = smt2#scanner#ScanSource(source)
+
+    const scan_start = reltime()
+    var scanner = smt2#scanner#Scanner(source)
+    const tokens = scanner->smt2#scanner#GetAllTokens()
+    echo printf('Scanning took %s', reltimestr(reltime(scan_start)))
+
+    const parse_start = reltime()
     const res = tokens->ParseParagraph()
+    echo printf('Parsing took %s', reltimestr(reltime(parse_start)))
+
+    # amebsa             0.87 + 0.62
+    # append_fs_unsafe.c 7.4 + 12.8
 
     if debug | res.value->PrintAst() | endif
     return res.value
@@ -226,7 +237,8 @@ def smt2#parser#ParseAllParagraphs(): list<dict<any>>
 
     var asts = []
     for source in paragraphs
-        const tokens = smt2#scanner#ScanSource(source)
+        var scanner = smt2#scanner#Scanner(source)
+        const tokens = scanner->smt2#scanner#GetAllTokens()
         const res = tokens->ParseParagraph()
         asts->add(res.value)
 

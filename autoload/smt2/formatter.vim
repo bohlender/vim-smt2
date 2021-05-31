@@ -95,7 +95,9 @@ enddef
 # ------------------------------------------------------------------------------
 def smt2#formatter#FormatCurrentParagraph()
     const cursor = getpos('.')
+    const t_start = reltime()
     const ast = smt2#parser#ParseCurrentParagraph()
+    echo printf('Scanning & parsing took %s', reltimestr(reltime(t_start)))
 
     # Identify on which end of the buffer we are (to fix newlines later)
     silent! normal! {
@@ -104,7 +106,11 @@ def smt2#formatter#FormatCurrentParagraph()
     const is_last_paragraph = line('.') == line('$')
 
     # Replace paragraph by formatted lines
+    const fmt_start = reltime()
     const lines = split(Format(ast), '\n')
+    echo printf('Formatting took %s', reltimestr(reltime(fmt_start)))
+    # amebsa 1,55 + 0.285
+    # append_fs_unsafe.c 20.7 + 13.7
     silent! normal! {d}
     if is_last_paragraph
         call append('.', [''] + lines)
