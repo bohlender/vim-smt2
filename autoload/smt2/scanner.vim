@@ -45,13 +45,14 @@ def TokenKind2Str(kind: number): string
     elseif kind == token_eof
         return "EOF"
     else
-        echoerr "Unexpected token kind: " .. kind # TODO: throw?
+        echoerr "Unexpected token kind: " .. kind
         return ''
     endif
 enddef
 
-def PrettyPrint(token: dict<any>)
-    echo printf("%4d %8s %s", token.pos, token.kind->TokenKind2Str(), token.lexeme)
+def PrettyPrint(scanner: dict<any>, token: dict<any>)
+    const coord = scanner->Pos2Coord(token.pos)
+    echo printf("%4d:%-3d (%5d) %8s %s", coord.line, coord.col, token.pos, token.kind->TokenKind2Str(), token.lexeme)
 enddef
 
 # ------------------------------------------------------------------------------
@@ -60,18 +61,19 @@ enddef
 # Note: The public interface is limited to the
 #       - field cur_token
 #       - method NextToken
-#       - field at_new_paragraph (needed to maintain paragrahps in formatting)
+#       - field at_new_paragraph (needed to distinguish paragraphs in parser)
 #
 #       The other fields should only be used internally / in this file
 # ------------------------------------------------------------------------------
-# TODO: Add linenr to scanner?
 # TODO: Enforce restriction to ASCII? We should if we use the lookup table below
 # TODO: Do not take a string but a character stream (or just buffer and pos)?
 
-def smt2#scanner#Scanner(source: string): dict<any>
+def smt2#scanner#Scanner(source: string, line_offset = 1): dict<any>
     var scanner = {
         chars: source->trim(" \t\n\r", 2)->split('\zs'),
-        pos: 0, at_new_paragraph: false}
+        line_offset: line_offset, # start line of source string in buffer
+        pos: 0,                   # pos in source string -- not column in line
+        at_new_paragraph: false}
 
     if scanner.chars->empty()
         scanner.at_eof = true
@@ -121,18 +123,8 @@ def smt2#scanner#NextToken(scanner: dict<any>)
 
     if debug
         if scanner.at_new_paragraph | echo "\n" | endif
-        scanner.cur_token->PrettyPrint()
+        scanner->PrettyPrint(scanner.cur_token)
     endif
-enddef
-
-# TODO: Remove once parser works without backtracking
-def smt2#scanner#GetAllTokens(scanner: dict<any>): list<dict<any>>
-    var tokens = []
-    while scanner.cur_token.kind != token_eof
-        tokens->add(scanner.cur_token)
-        scanner->smt2#scanner#NextToken()
-    endwhile
-    return tokens
 enddef
 
 def NextPos(scanner: dict<any>)
@@ -146,20 +138,28 @@ enddef
 
 def Enforce(scanner: dict<any>, expr: bool, msg: string)
     if !expr
-        throw printf("Scanner error: %s (pos: %d)", msg, scanner.pos)
+        const coord = scanner->Pos2Coord(scanner.pos)
+        throw printf("Syntax error (at %d:%d): %s ", coord.line, coord.col, msg)
     endif
+enddef
+
+# This is slow and intended for use in error messages & debugging only
+def Pos2Coord(scanner: dict<any>, pos: number): dict<number>
+    const line = scanner.chars[: pos]->count("\n") + scanner.line_offset
+
+    var cur_pos = pos - 1
+    while cur_pos >= 0 && scanner.chars[cur_pos] != "\n"
+        cur_pos -= 1
+    endwhile
+
+    return {line: line, col: pos - cur_pos}
 enddef
 
 # ------------------------------------------------------------------------------
 # <white_space_char> ::= 9 (tab), 10 (lf), 13 (cr), 32 (space)
 #
-# TODO: Verify claim
-# Note: Our input string joins all lines by "\n" so "\r" can be ignored
+# Note: The source string has all lines joined by "\n" so "\r" can be ignored
 # ------------------------------------------------------------------------------
-#def IsWhitespace(char_nr: number): bool
-#    return char_nr == 32 || char_nr == 9 || char_nr == 10 || char_nr == 13
-#enddef
-
 def SkipWhitespace(scanner: dict<any>)
     var newlines = 0
     while !scanner.at_eof
@@ -181,8 +181,7 @@ enddef
 # quoted symbol that begins with ; and ends with the first subsequent
 # line-breaking character, i.e. 10 (lf) or 13 (cr)
 #
-# TODO: Verify claim
-# Note: Our input string joins all lines by "\n" so "\r" can be ignored
+# Note: The source string has all lines joined by "\n" so "\r" can be ignored
 # ------------------------------------------------------------------------------
 def ReadComment(scanner: dict<any>): dict<any>
     if debug | scanner->Enforce(scanner.cur_char == ';', "Not the start of a comment") | endif
@@ -247,7 +246,7 @@ def InitIsAlphaNumericCharNr(): list<bool>
     var lookup_table = []
     var char_nr = 0
     while char_nr < 255
-        lookup_table[char_nr] = char_nr->nr2char()->match('\m\C^[0-9a-fA-F]') != -1
+        lookup_table->add(char_nr->nr2char()->match('\m\C^[0-9a-fA-F]') != -1)
         char_nr += 1
     endwhile
     return lookup_table
@@ -279,7 +278,6 @@ def ReadBv(scanner: dict<any>): dict<any>
     endif
     return Token(token_bv, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
-
 
 # ------------------------------------------------------------------------------
 # <string> ::= sequence of whitespace and printable characters in double
@@ -316,7 +314,7 @@ def InitIsSimpleSymbolCharNr(): list<bool>
     var lookup_table = []
     var char_nr = 0
     while char_nr < 255
-        lookup_table[char_nr] = char_nr->nr2char()->match('\m\C^[a-zA-Z0-9+-/*=%?!.$_~&^<>@]') != -1
+        lookup_table->add(char_nr->nr2char()->match('\m\C^[a-zA-Z0-9+-/*=%?!.$_~&^<>@]') != -1)
         char_nr += 1
     endwhile
     return lookup_table
