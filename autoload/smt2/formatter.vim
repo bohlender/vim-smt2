@@ -1,7 +1,5 @@
 vim9script
 
-# TODO: Refer to token kind by name, e.g. token_comment instead of 8
-
 # ------------------------------------------------------------------------------
 # Config
 # ------------------------------------------------------------------------------
@@ -16,17 +14,6 @@ if !exists("g:smt2_formatter_indent_str")
 endif
 
 # ------------------------------------------------------------------------------
-# Format status
-# ------------------------------------------------------------------------------
-def Fail(): dict<any>
-    return {success: false}
-enddef
-
-def Success(str: string): dict<any>
-    return {success: true, str: str}
-enddef
-
-# ------------------------------------------------------------------------------
 # Formatter
 # ------------------------------------------------------------------------------
 def FitsOneLine(ast: dict<any>): bool
@@ -38,8 +25,6 @@ def FitsOneLine(ast: dict<any>): bool
 enddef
 
 def FormatOneLine(ast: dict<any>): string
-    # TODO: Assert FitsOneLine
-    
     if ast.kind ==# 'Atom'
         return ast.value.lexeme
     elseif ast.kind ==# 'SExpr'
@@ -95,9 +80,7 @@ enddef
 # ------------------------------------------------------------------------------
 def smt2#formatter#FormatCurrentParagraph()
     const cursor = getpos('.')
-    const t_start = reltime()
     const ast = smt2#parser#ParseCurrentParagraph()
-    echo printf('Scanning & parsing took %s', reltimestr(reltime(t_start)))
 
     # Identify on which end of the buffer we are (to fix newlines later)
     silent! normal! {
@@ -106,13 +89,9 @@ def smt2#formatter#FormatCurrentParagraph()
     const is_last_paragraph = line('.') == line('$')
 
     # Replace paragraph by formatted lines
-    const fmt_start = reltime()
     const lines = split(Format(ast), '\n')
-    echo printf('Formatting took %s', reltimestr(reltime(fmt_start)))
-    # amebsa 1,55 + 0.285
-    # append_fs_unsafe.c 20.7 + 13.7
     silent! normal! {d}
-    if is_last_paragraph
+    if is_last_paragraph && !is_first_paragraph
         call append('.', [''] + lines)
     else
         call append('.', lines + [''])

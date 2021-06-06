@@ -1,10 +1,7 @@
 vim9script
-const debug = true
+const debug = false
 set maxfuncdepth=100000000 # SMT files tend to be highly nested
 
-# TODO: Make parse status a boolean
-# TODO: Support formatting of answers. Must parse non-SExpr (e.g. unsat, error)
-# TODO: Error handling if parsing fails, e.g. via expectation tokens?
 # TODO: Retry iterative parsing now that we have a scanner and simpler grammar
 # TODO: Refer to token kind by name, e.g. token_comment instead of 8
 # TODO: Change Ast.kind type from string to enum/number?
@@ -12,8 +9,8 @@ set maxfuncdepth=100000000 # SMT files tend to be highly nested
 # ------------------------------------------------------------------------------
 # AST nodes -- essentially named token wrappers
 #
-# Note: pos_from, pos_to and contains_comment are introduced to allow for a fast
-#       FitsOneLine(ast) function in the formatter.
+# Note: pos_from, pos_to and contains_comment were only introduced to allow for
+#       a fast FitsOneLine(ast) function in the formatter.
 #       Here, pos_from and pos_to refer to indices of characters -- not tokens
 # ------------------------------------------------------------------------------
 def Ast(kind: string, value: any, pos_from: number, pos_to: number, contains_comment: bool): dict<any>
@@ -63,186 +60,164 @@ def PrintAst(ast: dict<any>, indent = 0)
 enddef
 
 # ------------------------------------------------------------------------------
-# Parse status
-# ------------------------------------------------------------------------------
-
-# Parse status enumeration
-const status_success = 0
-const status_fail = 1
-
-# Parse result (status, position in token list, return value)
-def Fail(pos: number): dict<any>
-    return {status: status_fail, pos: pos}
-enddef
-
-def Success(pos: number, value: any): dict<any>
-    return {status: status_success, pos: pos, value: value}
-enddef
-
-# ------------------------------------------------------------------------------
-# Grammar / concrete parsers
+# Grammar
 # ------------------------------------------------------------------------------
 # Paragraph ::= Expr+
 # Expr      ::= SExpr | Atom
 # SExpr     ::= '(' Expr* ')'
 
-def ParseLParen(tokens: list<dict<any>>, pos: number): dict<any>
-    if pos < len(tokens) && tokens[pos].kind == 0
-        return Success(pos + 1, v:none)
-    endif
-    return Fail(pos)
+# ------------------------------------------------------------------------------
+# LParen
+# ------------------------------------------------------------------------------
+def AtStartOfLParen(scanner: dict<any>): bool
+    return scanner.cur_token.kind == 0 # token_lparen
 enddef
 
-def ParseRParen(tokens: list<dict<any>>, pos: number): dict<any>
-    if pos < len(tokens) && tokens[pos].kind == 1
-        return Success(pos + 1, v:none)
-    endif
-    return Fail(pos)
-enddef
-
-def ParseAtom(tokens: list<dict<any>>, pos: number): dict<any>
-    if pos < len(tokens)
-        const token = tokens[pos]
-        if 2 <= token.kind && token.kind <= 8
-            return Success(pos + 1, AtomAst(token))
-        endif
-    endif
-    return Fail(pos)
-enddef
-
-def ParseExpr(tokens: list<dict<any>>, pos: number): dict<any>
-    var res = ParseSExpr(tokens, pos)
-    if res.status == status_success
-        return res
+def ParseLParen(scanner: dict<any>) # consumes token; no return
+    if debug
+        scanner->smt2#scanner#Enforce(scanner->AtStartOfLParen(),
+            "ParseLParen called but not at start of LParen",
+            scanner.cur_token.pos)
     endif
 
-    return ParseAtom(tokens, pos)
-enddef
-
-#def ParseNOrMoreExpr(n: number, tokens: list<dict<any>>, pos: number): dict<any>
-#    var exprs: list<any>
-#    var match_count = 0
-#    var cur_pos = pos
-#    while true
-#        var res = ParseExpr(tokens, cur_pos)
-#        if res.status == status_success
-#            match_count += 1
-#            cur_pos = res.pos
-#            exprs->add(res.value)
-#        else
-#            break
-#        endif
-#    endwhile
-#    if match_count < n
-#        return Fail(pos)
-#    endif
-#    return Success(cur_pos, exprs)
-#enddef
-
-def ParseSExpr(tokens: list<dict<any>>, pos: number): dict<any>
-    var res = ParseLParen(tokens, pos)
-    if res.status == status_fail
-        return Fail(pos)
-    endif
-
-    # Inlined ParseNOrMoreExpr(0, tokens, res.pos)
-    var exprs: list<any>
-    var cur_pos = res.pos
-    while true
-        res = ParseExpr(tokens, cur_pos)
-        if res.status == status_success
-            cur_pos = res.pos
-            exprs->add(res.value)
-        else
-            break
-        endif
-    endwhile
-
-    res = ParseRParen(tokens, cur_pos)
-    if res.status == status_fail
-        return Fail(pos)
-    endif
-
-    const pos_from = tokens[pos].pos
-    const pos_to = tokens[cur_pos].pos + 1
-    return Success(res.pos, SExprAst(exprs, pos_from, pos_to))
-enddef
-
-def ParseParagraph(tokens: list<dict<any>>, pos = 0): dict<any>
-    # Inlined ParseNOrMoreExpr(1, tokens, res.pos)
-    var exprs: list<any>
-    var matched = false
-    var cur_pos = pos
-    while true
-        var res = ParseExpr(tokens, cur_pos)
-        if res.status == status_success
-            matched = true
-            cur_pos = res.pos
-            exprs->add(res.value)
-        else
-            break
-        endif
-    endwhile
-    if !matched
-        return Fail(pos)
-    endif
-
-    const pos_from = tokens[pos].pos
-    const pos_to = tokens[cur_pos - 1].pos + len(tokens[cur_pos - 1].lexeme)
-    return Success(cur_pos, ParagraphAst(exprs, pos_from, pos_to))
+    scanner->smt2#scanner#NextToken()
 enddef
 
 # ------------------------------------------------------------------------------
-# Fetch paragraphs to format
+# RParen
 # ------------------------------------------------------------------------------
-# TODO: Splitting by \n{2,} may break up quoted (multiline) symbols
-def GetAllParagraphs(): list<string>
-    const content = join(getline(1, '$'), "\n")
-    const paragraphs = split(content, '\m\C\n\{2,}')
-    return paragraphs
+def AtStartOfRParen(scanner: dict<any>): bool
+    return scanner.cur_token.kind == 1 # token_rparen
 enddef
 
-# TODO: Rename -- start of paragraph till eof
-def GetCurrentParagraph(): string
-    const cursor = getpos('.')
-    silent! normal! {"0yG
-    call setpos('.', cursor)
-    return trim(@0)
+def ParseRParen(scanner: dict<any>) # consumes token; no return
+    if debug
+        scanner->smt2#scanner#Enforce(scanner->AtStartOfRParen(),
+            "ParseRParen called but not at start of RParen",
+            scanner.cur_token.pos)
+    endif
+
+    scanner->smt2#scanner#NextToken()
+enddef
+
+# ------------------------------------------------------------------------------
+# Atom
+# ------------------------------------------------------------------------------
+def AtStartOfAtom(scanner: dict<any>): bool
+    return 2 <= scanner.cur_token.kind && scanner.cur_token.kind <= 8
+enddef
+
+def ParseAtom(scanner: dict<any>): dict<any>
+    if debug
+        scanner->smt2#scanner#Enforce(scanner->AtStartOfAtom(),
+            "ParseAtom called but not at start of Atom",
+            scanner.cur_token.pos)
+    endif
+
+    const ast = AtomAst(scanner.cur_token)
+    scanner->smt2#scanner#NextToken()
+    return ast
+enddef
+
+# ------------------------------------------------------------------------------
+# Expr
+# ------------------------------------------------------------------------------
+def AtStartOfExpr(scanner: dict<any>): bool
+    return scanner->AtStartOfSExpr() || scanner->AtStartOfAtom()
+enddef
+def ParseExpr(scanner: dict<any>): dict<any>
+    if debug
+        scanner->smt2#scanner#Enforce(scanner->AtStartOfExpr(),
+            "ParseExpr called but not at start of Expr",
+            scanner.cur_token.pos)
+    endif
+
+    if scanner->AtStartOfSExpr()
+        return scanner->ParseSExpr()
+    endif
+    return scanner->ParseAtom()
+enddef
+
+# ------------------------------------------------------------------------------
+# SExpr
+# ------------------------------------------------------------------------------
+const AtStartOfSExpr = funcref(AtStartOfLParen)
+def ParseSExpr(scanner: dict<any>): dict<any>
+    const pos_from = scanner.cur_token.pos
+
+    if debug
+        scanner->smt2#scanner#Enforce(scanner->AtStartOfSExpr(),
+            "ParseSExpr called but not at start of SExpr",
+            pos_from)
+    endif
+    scanner->ParseLParen()
+
+    # Expr*
+    var exprs: list<any>
+    while scanner->AtStartOfExpr()
+        exprs->add(scanner->ParseExpr())
+    endwhile
+
+    scanner->smt2#scanner#Enforce(scanner->AtStartOfRParen(),
+        printf("Expected RParen but got %s", scanner.cur_token.kind->smt2#scanner#TokenKind2Str()),
+        scanner.cur_token.pos)
+    scanner->ParseRParen()
+
+    const pos_to = scanner.cur_token.pos
+    return SExprAst(exprs, pos_from, pos_to)
+enddef
+
+# ------------------------------------------------------------------------------
+# Paragraph
+# ------------------------------------------------------------------------------
+def ParseParagraph(scanner: dict<any>): dict<any>
+    const pos_from = scanner.cur_token.pos
+
+    # Expr+
+    scanner->smt2#scanner#Enforce(scanner->AtStartOfExpr(),
+        printf("Expected Expr but got %s", scanner.cur_token.kind->smt2#scanner#TokenKind2Str()),
+        pos_from)
+
+    var exprs = [scanner->ParseExpr()]
+    while scanner->AtStartOfExpr() && !scanner.at_new_paragraph
+        exprs->add(scanner->ParseExpr())
+    endwhile
+
+    const pos_to = scanner.cur_token.pos
+    return ParagraphAst(exprs, pos_from, pos_to)
 enddef
 
 # ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
 def smt2#parser#ParseCurrentParagraph(): dict<any>
-    const source = GetCurrentParagraph()
+    # source = [start of current paragraph, EOF]
+    # Note: This is needed since `silent! normal! {y}` may not yank full paragraphs
+    #       in the context of multiline expressions
+    const cursor = getpos('.')
+    silent! normal! {
+    const line_offset = line('.')
+    const source = join(getline('.', '$'), "\n")
+    call setpos('.', cursor)
 
-    const scan_start = reltime()
-    var scanner = smt2#scanner#Scanner(source)
-    const tokens = scanner->smt2#scanner#GetAllTokens()
-    echo printf('Scanning took %s', reltimestr(reltime(scan_start)))
+    var scanner = smt2#scanner#Scanner(source, line_offset)
+    const ast = scanner->ParseParagraph()
 
-    const parse_start = reltime()
-    const res = tokens->ParseParagraph()
-    echo printf('Parsing took %s', reltimestr(reltime(parse_start)))
-
-    # amebsa             0.87 + 0.62
-    # append_fs_unsafe.c 7.4 + 12.8
-
-    if debug | res.value->PrintAst() | endif
-    return res.value
+    if debug | ast->PrintAst() | endif
+    return ast
 enddef
 
 def smt2#parser#ParseAllParagraphs(): list<dict<any>>
-    const paragraphs = GetAllParagraphs()
+    # source = current buffer
+    const source = join(getline(1, '$'), "\n")
 
+    var scanner = smt2#scanner#Scanner(source)
     var asts = []
-    for source in paragraphs
-        var scanner = smt2#scanner#Scanner(source)
-        const tokens = scanner->smt2#scanner#GetAllTokens()
-        const res = tokens->ParseParagraph()
-        asts->add(res.value)
+    while scanner.cur_token.kind != 9 # token_eof
+        const ast = scanner->ParseParagraph()
+        asts->add(ast)
 
-        if debug | res.value->PrintAst() | endif
-    endfor
+        if debug | ast->PrintAst() | endif
+    endwhile
     return asts
 enddef
