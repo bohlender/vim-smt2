@@ -2,7 +2,7 @@
 ![Example](/example.png?raw=true "Example")
 
 ## What is this?
-A VIM plugin that provides syntax highlighting and common operations when working with [SMT-LIB2](http://smtlib.cs.uiowa.edu/) files (`*.smt2`).
+A VIM plugin that provides syntax highlighting and common operations for working with [SMT-LIB2](http://smtlib.cs.uiowa.edu/) files (`*.smt2`).
 
 Although SMT-LIB2 is the standard language supported by most [SMT](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) solvers, some of them introduce custom language extensions.
 Such extensions may range from syntactical sugar to fine-grained control over the underlying solver-procedure.
@@ -10,11 +10,11 @@ Besides the base SMT-LIB2 language, this plugin also **supports the extensions o
 
 *Note: To provide a familiar experience, the syntax highlighting is directly derived from the source of [Z3's online demo](https://rise4fun.com/Z3/).*
 
-The following shortcuts work **without an SMT solver** being installed:
-* `<localleader>f` auto-formats the current paragraph
-* `<localleader>F` auto-formats the current buffer/file
+**Without an SMT solver** being installed, both the highlighting and the following shortcuts will be available:
+* `<localleader>f` auto-formats the current paragraph (uses `vim9script` and requires VIM >= v8.2)
+* `<localleader>F` auto-formats the current buffer/file (uses `vim9script` and requires VIM >= v8.2)
 
-The plugin also provides shortcuts for **evaluating the current file using an SMT solver** of your choice (*defaults to [Z3](https://github.com/Z3Prover/z3) or [boolector](http://fmv.jku.at/boolector)*):
+**With an SMT solver** of your choice being installed (*defaults to [Z3](https://github.com/Z3Prover/z3) or [boolector](http://fmv.jku.at/boolector)*), the following shortcuts will also be available:
 * `<localleader>r` evaluates the current file (in a terminal)
 * `<localleader>R` evaluates the current file and puts the output in a new split with syntax highlighting
 * `<localleader>v` prints the solver's version (handy if you switch often)
