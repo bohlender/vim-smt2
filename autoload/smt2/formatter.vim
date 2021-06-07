@@ -1,3 +1,17 @@
+" Formatting requires a rather recent Vim version
+if !((v:version > 802) || (v:version == 802 && has("patch2725")))
+    const s:errmsg_oldvim = "Vim >= 8.2.2725 required for auto-formatting"
+
+    "Dummies
+    function! smt2#formatter#FormatCurrentParagraph()
+        echoerr s:errmsg_oldvim
+    endfunction
+    function! smt2#formatter#FormatAllParagraphs()
+        echoerr s:errmsg_oldvim
+    endfunction
+
+    finish
+endif
 vim9script
 
 # ------------------------------------------------------------------------------
