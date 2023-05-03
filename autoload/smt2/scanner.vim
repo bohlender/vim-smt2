@@ -52,7 +52,7 @@ enddef
 
 def PrettyPrint(scanner: dict<any>, token: dict<any>)
     const coord = scanner->Pos2Coord(token.pos)
-    echo printf("%4d:%-3d (%5d) %8s %s", coord.line, coord.col, token.pos, token.kind->smt2#scanner#TokenKind2Str(), token.lexeme)
+    echo printf("%5d %4d:%-3d  %8s %s", token.pos, coord.line, coord.col, token.kind->smt2#scanner#TokenKind2Str(), token.lexeme)
 enddef
 
 # ------------------------------------------------------------------------------

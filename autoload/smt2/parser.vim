@@ -73,14 +73,16 @@ def AtStartOfLParen(scanner: dict<any>): bool
     return scanner.cur_token.kind == 0 # token_lparen
 enddef
 
-def ParseLParen(scanner: dict<any>) # consumes token; no return
+def ParseLParen(scanner: dict<any>): dict<any>
     if debug
         scanner->smt2#scanner#Enforce(scanner->AtStartOfLParen(),
             "ParseLParen called but not at start of LParen",
             scanner.cur_token.pos)
     endif
 
+    const token = scanner.cur_token
     scanner->smt2#scanner#NextToken()
+    return token
 enddef
 
 # ------------------------------------------------------------------------------
@@ -90,14 +92,16 @@ def AtStartOfRParen(scanner: dict<any>): bool
     return scanner.cur_token.kind == 1 # token_rparen
 enddef
 
-def ParseRParen(scanner: dict<any>) # consumes token; no return
+def ParseRParen(scanner: dict<any>): dict<any>
     if debug
         scanner->smt2#scanner#Enforce(scanner->AtStartOfRParen(),
             "ParseRParen called but not at start of RParen",
             scanner.cur_token.pos)
     endif
 
+    const token = scanner.cur_token
     scanner->smt2#scanner#NextToken()
+    return token
 enddef
 
 # ------------------------------------------------------------------------------
@@ -125,6 +129,7 @@ enddef
 def AtStartOfExpr(scanner: dict<any>): bool
     return scanner->AtStartOfSExpr() || scanner->AtStartOfAtom()
 enddef
+
 def ParseExpr(scanner: dict<any>): dict<any>
     if debug
         scanner->smt2#scanner#Enforce(scanner->AtStartOfExpr(),
@@ -142,6 +147,7 @@ enddef
 # SExpr
 # ------------------------------------------------------------------------------
 const AtStartOfSExpr = funcref(AtStartOfLParen)
+
 def ParseSExpr(scanner: dict<any>): dict<any>
     const pos_from = scanner.cur_token.pos
 
@@ -161,9 +167,9 @@ def ParseSExpr(scanner: dict<any>): dict<any>
     scanner->smt2#scanner#Enforce(scanner->AtStartOfRParen(),
         printf("Expected RParen but got %s", scanner.cur_token.kind->smt2#scanner#TokenKind2Str()),
         scanner.cur_token.pos)
-    scanner->ParseRParen()
+    const end_token = scanner->ParseRParen()
 
-    const pos_to = scanner.cur_token.pos
+    const pos_to = end_token.pos + 1
     return SExprAst(exprs, pos_from, pos_to)
 enddef
 
@@ -183,7 +189,7 @@ def ParseParagraph(scanner: dict<any>): dict<any>
         exprs->add(scanner->ParseExpr())
     endwhile
 
-    const pos_to = scanner.cur_token.pos
+    const pos_to = exprs[-1].pos_to
     return ParagraphAst(exprs, pos_from, pos_to)
 enddef
 
