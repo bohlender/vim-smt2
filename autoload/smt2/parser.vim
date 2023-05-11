@@ -7,17 +7,26 @@ set maxfuncdepth=100000000 # SMT files tend to be highly nested
 # TODO: Change Ast.kind type from string to enum/number?
 
 # ------------------------------------------------------------------------------
-# AST nodes -- essentially named token wrappers
+# AST nodes
 #
-# Note: pos_from, pos_to and contains_comment were only introduced to allow for
-#       a fast FitsOneLine(ast) function in the formatter.
-#       Here, pos_from and pos_to refer to indices of characters -- not tokens
+# Note: pos_from, pos_to and contains_comment allow for a fast FitsOneLine(ast)
+#       function in the formatter.
+#       Here, pos_from and pos_to refer to indices of characters -- not tokens.
 # ------------------------------------------------------------------------------
-def Ast(kind: string, value: any, pos_from: number, pos_to: number, contains_comment: bool): dict<any>
-    return {kind: kind, value: value, pos_from: pos_from, pos_to: pos_to, contains_comment: contains_comment}
+def Ast(kind: string, value: any, pos_from: number, pos_to: number, contains_comment: bool, scanner: dict<any>): dict<any>
+    # User-facing functionality wants start/end line and column -- not positions
+    def CalcCoords(): list<dict<number>>
+        const from = scanner.calcCoord(pos_from)
+        # If expression ends at end of line, pos_to will be in next line.
+        # That's undesired. Stay in the actual last line.
+        var to = scanner.calcCoord(pos_to - 1)
+        to.col += 1
+        return [from, to]
+    enddef
+    return {kind: kind, value: value, pos_from: pos_from, pos_to: pos_to, contains_comment: contains_comment, CalcCoords: CalcCoords}
 enddef
 
-def ParagraphAst(exprs: list<dict<any>>, pos_from: number, pos_to: number): dict<any>
+def ParagraphAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scanner: dict<any>): dict<any>
     var contains_comment = false
     for expr in exprs
         if expr.contains_comment
@@ -25,10 +34,10 @@ def ParagraphAst(exprs: list<dict<any>>, pos_from: number, pos_to: number): dict
             break
         endif
     endfor
-    return Ast('Paragraph', exprs, pos_from, pos_to, contains_comment)
+    return Ast('Paragraph', exprs, pos_from, pos_to, contains_comment, scanner)
 enddef
 
-def SExprAst(exprs: list<dict<any>>, pos_from: number, pos_to: number): dict<any>
+def SExprAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scanner: dict<any>): dict<any>
     var contains_comment = false
     for expr in exprs
         if expr.contains_comment
@@ -36,15 +45,22 @@ def SExprAst(exprs: list<dict<any>>, pos_from: number, pos_to: number): dict<any
             break
         endif
     endfor
-    return Ast('SExpr', exprs, pos_from, pos_to, contains_comment)
+    return Ast('SExpr', exprs, pos_from, pos_to, contains_comment, scanner)
 enddef
 
-def AtomAst(token: dict<any>): dict<any>
-    return Ast('Atom', token, token.pos, token.pos + len(token.lexeme), token.kind == 8)
+def AtomAst(token: dict<any>, scanner: dict<any>): dict<any>
+    return Ast('Atom', token, token.pos, token.pos + len(token.lexeme), token.kind == 8, scanner)
 enddef
 
 def PrintAst(ast: dict<any>, indent = 0)
-    echo repeat(' ', indent * 2) .. '[' .. ast.kind .. '] '
+    const coords = ast.CalcCoords()
+
+    echo printf("[%5d-%-5d) [%4d:%-3d-%4d:%-3d) %s[%s] ",
+        ast.pos_from, ast.pos_to,
+        coords[0].line, coords[0].col,
+        coords[1].line, coords[1].col,
+        repeat(' ', indent * 2),
+        ast.kind)
 
     if ast.kind ==# 'Atom'
         echon ast.value.lexeme
@@ -118,7 +134,7 @@ def ParseAtom(scanner: dict<any>): dict<any>
             scanner.cur_token.pos)
     endif
 
-    const ast = AtomAst(scanner.cur_token)
+    const ast = AtomAst(scanner.cur_token, scanner)
     scanner->smt2#scanner#NextToken()
     return ast
 enddef
@@ -170,7 +186,7 @@ def ParseSExpr(scanner: dict<any>): dict<any>
     const end_token = scanner->ParseRParen()
 
     const pos_to = end_token.pos + 1
-    return SExprAst(exprs, pos_from, pos_to)
+    return SExprAst(exprs, pos_from, pos_to, scanner)
 enddef
 
 # ------------------------------------------------------------------------------
@@ -190,24 +206,28 @@ def ParseParagraph(scanner: dict<any>): dict<any>
     endwhile
 
     const pos_to = exprs[-1].pos_to
-    return ParagraphAst(exprs, pos_from, pos_to)
+    return ParagraphAst(exprs, pos_from, pos_to, scanner)
 enddef
 
 # ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
-def smt2#parser#ParseCurrentParagraph(): dict<any>
-    # source = [start of current paragraph, EOF]
-    # Note: This is needed since `silent! normal! {y}` may not yank full paragraphs
-    #       in the context of multiline expressions
-    const cursor = getpos('.')
-    silent! normal! {
-    const line_offset = line('.')
-    const source = join(getline('.', '$'), "\n")
-    call setpos('.', cursor)
+def smt2#parser#ParseOutermostSExpr(): dict<any>
+    const cursor_bak = getpos('.')
+    if ! smt2#util#MoveToOutermostSExpr()
+        throw "Cursor is not in an S-expression!"
+    endif
+    const from = getpos('.')
+    call setpos('.', cursor_bak)
 
-    var scanner = smt2#scanner#Scanner(source, line_offset)
-    const ast = scanner->ParseParagraph()
+    # source = [start of outermost SExpr, EOF]
+    # Note: This is needed since `silent! normal! %` is not guaranteed to jump
+    #       to the matching ')', e.g. if an unmatched '(' occurs in a comment.
+    const lines_to_format = getline(from[1], '$')
+    const source = join(lines_to_format, "\n")
+
+    var scanner = smt2#scanner#Scanner(source, from[1], from[2])
+    const ast = scanner->ParseSExpr()
 
     if debug | ast->PrintAst() | endif
     return ast

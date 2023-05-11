@@ -7,5 +7,5 @@ nnoremap <silent> <buffer> <localleader>R :call smt2#solver#RunAndShowResult()<c
 nnoremap <silent> <buffer> <localleader>v :call smt2#solver#PrintVersion()<cr>
 
 " Mappings for formatting functionality
-nnoremap <silent> <buffer> <localleader>f :call smt2#formatter#FormatCurrentParagraph()<cr>
+nnoremap <silent> <buffer> <localleader>f :call smt2#formatter#FormatOutermostSExpr()<cr>
 nnoremap <silent> <buffer> <localleader>F :call smt2#formatter#FormatAllParagraphs()<cr>
