@@ -99,12 +99,13 @@ def smt2#formatter#FormatOutermostSExpr()
     # Format lines and potential surrounding text on them
     const formatted_lines = split(Format(ast), '\n')
     const ast_coords = ast.CalcCoords()
+    const ws_mask = " \n\t\r"
     const first_line_part_to_keep = getline(ast_coords[0].line)
         ->strcharpart(0, ast_coords[0].col - 2)
-        ->trim(2)
+        ->trim(ws_mask, 2)
     const last_line_part_to_keep = getline(ast_coords[1].line)
         ->strcharpart(ast_coords[1].col - 1)
-        ->trim(1)
+        ->trim(ws_mask, 1)
 
     # Replace S-expression by formatted lines (w/o killing surrounding text)
     deletebufline('%', ast_coords[0].line, ast_coords[1].line)
