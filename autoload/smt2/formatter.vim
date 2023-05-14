@@ -6,7 +6,7 @@ if (v:version < 802) || (v:version == 802 && !has("patch2725"))
     function! smt2#formatter#FormatOutermostSExpr()
         echoerr s:errmsg_oldvim
     endfunction
-    function! smt2#formatter#FormatAllParagraphs()
+    function! smt2#formatter#FormatFile()
         echoerr s:errmsg_oldvim
     endfunction
 
@@ -84,22 +84,28 @@ def Format(ast: dict<any>, indent = 0): string
             call formatted->add(child->Format())
         endfor
         return formatted->join("\n")
+    elseif ast.kind ==# 'File'
+        var formatted = []
+        for child in ast.value
+            call formatted->add(child->Format())
+        endfor
+        return formatted->join("\n\n")
     endif
     throw 'Cannot format AST node: ' .. string(ast)
     return '' # Unreachable
 enddef
 
 # ------------------------------------------------------------------------------
-# Public functions
+# Auxiliary
 # ------------------------------------------------------------------------------
-def smt2#formatter#FormatOutermostSExpr()
+
+def FormatInCurrentBuffer(ast: dict<any>)
     const cursor = getpos('.')
-    const ast = smt2#parser#ParseOutermostSExpr()
 
     # Format lines and potential surrounding text on them
     const formatted_lines = split(Format(ast), '\n')
     const ast_coords = ast.CalcCoords()
-    const ws_mask = " \n\t\r"
+    const ws_mask = " \n\r\t"
     const first_line_part_to_keep = getline(ast_coords[0].line)
         ->strcharpart(0, ast_coords[0].col - 2)
         ->trim(ws_mask, 2)
@@ -107,7 +113,7 @@ def smt2#formatter#FormatOutermostSExpr()
         ->strcharpart(ast_coords[1].col - 1)
         ->trim(ws_mask, 1)
 
-    # Replace S-expression by formatted lines (w/o killing surrounding text)
+    # Replace section of AST by formatted lines (w/o killing surrounding text)
     deletebufline('%', ast_coords[0].line, ast_coords[1].line)
     if !empty(last_line_part_to_keep)
         last_line_part_to_keep->append(ast_coords[0].line - 1)
@@ -121,21 +127,41 @@ def smt2#formatter#FormatOutermostSExpr()
     call setpos('.', cursor)
 enddef
 
-def smt2#formatter#FormatAllParagraphs()
-    const cursor = getpos('.')
-    const asts = smt2#parser#ParseAllParagraphs()
+def RemoveLeadingEmptyLines()
+    while true
+        const first_line = getline(1)
+        if first_line->trim()->empty()
+            deletebufline('%', 1)
+        else
+            break
+        endif
+    endwhile
+enddef
 
-    # Clear buffer & insert formatted paragraphs
-    silent! :1,$delete
-    for ast in asts
-        const lines = split(Format(ast), '\n') + ['']
-        call append('$', lines)
-    endfor
+def RemoveTrailingEmptyLines()
+    while true
+        const last_line = getline('$')
+        if last_line->trim()->empty()
+            deletebufline('%', '$')
+        else
+            break
+        endif
+    endwhile
+enddef
 
-    # Remove first & trailing empty lines
-    silent! :1delete
-    silent! :$delete
+# ------------------------------------------------------------------------------
+# Public functions
+# ------------------------------------------------------------------------------
 
-    # Restore cursor position
-    call setpos('.', cursor)
+def smt2#formatter#FormatOutermostSExpr()
+    const ast = smt2#parser#ParseOutermostSExpr()
+    FormatInCurrentBuffer(ast)
+enddef
+
+def smt2#formatter#FormatFile()
+    const ast = smt2#parser#ParseFile()
+    FormatInCurrentBuffer(ast)
+
+    RemoveLeadingEmptyLines()
+    RemoveTrailingEmptyLines()
 enddef

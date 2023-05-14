@@ -70,7 +70,7 @@ enddef
 
 def smt2#scanner#Scanner(source: string, start_line = 1, start_col = 1): dict<any>
     var scanner = {
-        chars: source->trim(2)->split('\zs'),
+        chars: source->trim(" \n\r\t", 2)->split('\zs'),
         line_offset: start_line, # start line of source string in buffer
         pos: start_col - 1,      # pos in source string -- not column in line
         at_new_paragraph: false,

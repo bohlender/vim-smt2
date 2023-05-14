@@ -26,6 +26,17 @@ def Ast(kind: string, value: any, pos_from: number, pos_to: number, contains_com
     return {kind: kind, value: value, pos_from: pos_from, pos_to: pos_to, contains_comment: contains_comment, CalcCoords: CalcCoords}
 enddef
 
+def FileAst(paragraphs: list<dict<any>>, pos_from: number, pos_to: number, scanner: dict<any>): dict<any>
+    var contains_comment = false
+    for paragraph in paragraphs
+        if paragraph.contains_comment
+            contains_comment = true
+            break
+        endif
+    endfor
+    return Ast('File', paragraphs, pos_from, pos_to, contains_comment, scanner)
+enddef
+
 def ParagraphAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scanner: dict<any>): dict<any>
     var contains_comment = false
     for expr in exprs
@@ -72,13 +83,18 @@ def PrintAst(ast: dict<any>, indent = 0)
         for v in ast.value
             call PrintAst(v, indent + 1)
         endfor
+    elseif ast.kind ==# 'File'
+        for v in ast.value
+            call PrintAst(v, indent + 1)
+        endfor
     endif
 enddef
 
 # ------------------------------------------------------------------------------
 # Grammar
 # ------------------------------------------------------------------------------
-# Paragraph ::= Expr+
+# File      ::= Paragraph+
+# Paragraph ::= Expr+ EndOfParagraph
 # Expr      ::= SExpr | Atom
 # SExpr     ::= '(' Expr* ')'
 
@@ -210,15 +226,31 @@ def ParseParagraph(scanner: dict<any>): dict<any>
 enddef
 
 # ------------------------------------------------------------------------------
+# File
+# ------------------------------------------------------------------------------
+def ParseFile(scanner: dict<any>): dict<any>
+    const pos_from = scanner.cur_token.pos
+
+    var paragraphs = []
+    while scanner.cur_token.kind != 9 # token_eof
+        const ast = scanner->ParseParagraph()
+        paragraphs->add(ast)
+    endwhile
+
+    const pos_to = empty(paragraphs) ? pos_from : paragraphs[-1].pos_to
+    return FileAst(paragraphs, pos_from, pos_to, scanner)
+enddef
+
+# ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
 def smt2#parser#ParseOutermostSExpr(): dict<any>
-    const cursor_bak = getpos('.')
+    const cursor = getpos('.')
     if ! smt2#util#MoveToOutermostSExpr()
         throw "Cursor is not in an S-expression!"
     endif
     const from = getpos('.')
-    call setpos('.', cursor_bak)
+    call setpos('.', cursor)
 
     # source = [start of outermost SExpr, EOF]
     # Note: This is needed since `silent! normal! %` is not guaranteed to jump
@@ -233,17 +265,14 @@ def smt2#parser#ParseOutermostSExpr(): dict<any>
     return ast
 enddef
 
-def smt2#parser#ParseAllParagraphs(): list<dict<any>>
-    # source = current buffer
-    const source = join(getline(1, '$'), "\n")
+def smt2#parser#ParseFile(): dict<any>
+    # source = [first non-empty line, EOF]
+    const first_non_empty_line = search(".")
+    const source = join(getline(first_non_empty_line, '$'), "\n")
 
-    var scanner = smt2#scanner#Scanner(source)
-    var asts = []
-    while scanner.cur_token.kind != 9 # token_eof
-        const ast = scanner->ParseParagraph()
-        asts->add(ast)
+    var scanner = smt2#scanner#Scanner(source, first_non_empty_line)
+    const ast = scanner->ParseFile()
 
-        if debug | ast->PrintAst() | endif
-    endwhile
-    return asts
+    if debug | ast->PrintAst() | endif
+    return ast
 enddef
