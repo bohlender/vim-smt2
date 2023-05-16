@@ -3,6 +3,9 @@ if (v:version < 802) || (v:version == 802 && !has("patch2725"))
     const s:errmsg_oldvim = "Vim >= 8.2.2725 required for auto-formatting"
 
     "Dummies
+    function! smt2#formatter#FormatCurrentParagraph()
+        echoerr s:errmsg_oldvim
+    endfunction
     function! smt2#formatter#FormatOutermostSExpr()
         echoerr s:errmsg_oldvim
     endfunction
@@ -152,6 +155,10 @@ enddef
 # ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
+def smt2#formatter#FormatCurrentParagraph()
+    const ast = smt2#parser#ParseCurrentParagraph()
+    FormatInCurrentBuffer(ast)
+enddef
 
 def smt2#formatter#FormatOutermostSExpr()
     const ast = smt2#parser#ParseOutermostSExpr()

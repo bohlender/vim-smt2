@@ -11,7 +11,7 @@ endif
 
 nnoremap <silent> <buffer> <Plug>Smt2RunAndShowResult :call smt2#solver#RunAndShowResult()<cr>
 if !hasmapto('<Plug>Smt2RunAndShowResult', 'n')
-    nmap <unique> <silent> <localleader>R <Plug>Smt2RunAndShowResult
+    nmap <silent> <localleader>R <Plug>Smt2RunAndShowResult
 endif
 
 nnoremap <silent> <Plug>Smt2PrintVersion :call smt2#solver#PrintVersion()<CR>
@@ -22,10 +22,13 @@ endif
 " ------------------------------------------------------------------------------
 " Mappings for formatting functionality
 " ------------------------------------------------------------------------------
-nnoremap <silent> <buffer> <Plug>Smt2FormatOutermostSExpr :call smt2#formatter#FormatOutermostSExpr()<cr>
-if !hasmapto('<Plug>Smt2FormatOutermostSExpr', 'n')
-    nmap <silent> <localleader>f <Plug>Smt2FormatOutermostSExpr
+nnoremap <silent> <buffer> <Plug>Smt2FormatCurrentParagraph :call smt2#formatter#FormatCurrentParagraph()<cr>
+if !hasmapto('<Plug>Smt2FormatCurrentParagraph', 'n') && (mapcheck('<localleader>f', 'n') == '')
+    nmap <silent> <localleader>f <Plug>Smt2FormatCurrentParagraph
 endif
+
+" Alternative function to put on <localleader>f
+nnoremap <silent> <buffer> <Plug>Smt2FormatOutermostSExpr :call smt2#formatter#FormatOutermostSExpr()<cr>
 
 nnoremap <silent> <buffer> <Plug>Smt2FormalFile :call smt2#formatter#FormatFile()<cr>
 if !hasmapto('<Plug>Smt2FormalFile', 'n')

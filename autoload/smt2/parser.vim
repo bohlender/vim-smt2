@@ -242,11 +242,64 @@ def ParseFile(scanner: dict<any>): dict<any>
 enddef
 
 # ------------------------------------------------------------------------------
+# Auxiliary
+#
+# TODO: MoveTo* functions rely on local search rather than scanning of the
+#       whole file and may not be correct in corner cases. Consider tweaking.
+# ------------------------------------------------------------------------------
+
+# Returns true if successful, i.e. on move to '(' of outermost SExpr
+def MoveToOutermostSExpr(): bool
+    var cur_pos = getpos('.')
+    while true
+        silent! normal! [(
+        const new_pos = getpos('.')
+        if cur_pos == new_pos
+            break
+        else
+            cur_pos = new_pos
+        endif
+    endwhile
+
+    const cur_char = getline('.')[charcol('.') - 1]
+    return cur_char == '('
+enddef
+
+def MoveToStartOfCurrentParagraph()
+    while true
+        MoveToOutermostSExpr()
+        if search('\S', 'b', line('.')) == 0
+            break
+        endif
+    endwhile
+    silent! normal! {
+enddef
+
+# ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
+def smt2#parser#ParseCurrentParagraph(): dict<any>
+    const cursor = getpos('.')
+    MoveToStartOfCurrentParagraph()
+    const from = getpos('.')
+    call setpos('.', cursor)
+
+    # source = [paragraph of outermost SExpr, EOF]
+    # Note: This is needed since `silent! normal! {` is not guaranteed to jump
+    #       to the start of the paragraph, e.g. if newlines occur in between.
+    const lines_to_format = getline(from[1], '$')
+    const source = join(lines_to_format, "\n")
+
+    var scanner = smt2#scanner#Scanner(source, from[1], from[2])
+    const ast = scanner->ParseParagraph()
+
+    if debug | ast->PrintAst() | endif
+    return ast
+enddef
+
 def smt2#parser#ParseOutermostSExpr(): dict<any>
     const cursor = getpos('.')
-    if ! smt2#util#MoveToOutermostSExpr()
+    if ! MoveToOutermostSExpr()
         throw "Cursor is not in an S-expression!"
     endif
     const from = getpos('.')
@@ -267,7 +320,7 @@ enddef
 
 def smt2#parser#ParseFile(): dict<any>
     # source = [first non-empty line, EOF]
-    const first_non_empty_line = search(".")
+    const first_non_empty_line = search('.')
     const source = join(getline(first_non_empty_line, '$'), "\n")
 
     var scanner = smt2#scanner#Scanner(source, first_non_empty_line)
