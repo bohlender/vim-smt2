@@ -319,8 +319,12 @@ def smt2#parser#ParseOutermostSExpr(): dict<any>
 enddef
 
 def smt2#parser#ParseFile(): dict<any>
-    # source = [first non-empty line, EOF]
+    const cursor = getpos('.')
+    cursor(1, 1)
     const first_non_empty_line = search('.')
+    call setpos('.', cursor)
+
+    # source = [first non-empty line, EOF]
     const source = join(getline(first_non_empty_line, '$'), "\n")
 
     var scanner = smt2#scanner#Scanner(source, first_non_empty_line)
