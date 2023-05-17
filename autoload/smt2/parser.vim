@@ -275,17 +275,21 @@ def CursorInSExpr(): bool
 enddef
 
 def MoveToStartOfCurrentParagraph()
-    # Move backwards until an empty line that is not in an SExpr is found,
-    # or -- if there is none -- to the first line of the file
-    while true
-        const empty_line = search('\m\C^\s*$', 'b', 1)
-        if !CursorInSExpr()
-            break
-        elseif empty_line == 0
-            cursor(1, 1)
-            break
-        endif
-    endwhile
+    # Empty (or whitespace) lines outside of S-expressions separate paragraphs.
+    # Nothing to do if cursor is already at such a line.
+    if !(getline('.')->trim()->empty() && !CursorInSExpr())
+        # Move backwards until an empty line that is not in an SExpr is found,
+        # or -- if there is none -- to the first line of the file
+        while true
+            const empty_line = search('\m\C^\s*$', 'b', 1)
+            if !CursorInSExpr()
+                break
+            elseif empty_line == 0
+                cursor(1, 1)
+                break
+            endif
+        endwhile
+    endif
 enddef
 
 # ------------------------------------------------------------------------------
