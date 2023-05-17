@@ -1,4 +1,4 @@
-# Extended SMT-LIB2 support for VIM
+# Extended SMT-LIB2 support for Vim
 ![Example](/example.png?raw=true "Example")
 
 ## What is this?
@@ -11,7 +11,7 @@ Besides the base SMT-LIB2 language, this plugin also **supports the extensions o
 *Note: To provide a familiar experience, the syntax highlighting is directly derived from the source of [Z3's online demo](https://rise4fun.com/Z3/).*
 
 **Without an SMT solver** being installed, both the highlighting and the following shortcuts will be available:
-* `<localleader>f` auto-formats the outermost S-expression (uses `vim9script` and requires Vim >= v8.2.2725)
+* `<localleader>f` auto-formats the current paragraph (uses `vim9script` and requires Vim >= v8.2.2725)
 * `<localleader>F` auto-formats the current buffer/file (uses `vim9script` and requires Vim >= v8.2.2725)
 
 **With an SMT solver** of your choice being installed (*defaults to [Z3](https://github.com/Z3Prover/z3) or [boolector](http://fmv.jku.at/boolector)*), the following shortcuts will also be available:
