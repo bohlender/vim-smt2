@@ -244,8 +244,9 @@ enddef
 # ------------------------------------------------------------------------------
 # Auxiliary
 #
-# TODO: MoveTo* functions rely on local search rather than scanning of the
-#       whole file and may not be correct in corner cases. Consider tweaking.
+# TODO: MoveTo* functions rely on local search instead of proper (but slow)
+#       scanning of the whole file and may be incorrect in corner cases.
+#       Consider tweaking.
 # ------------------------------------------------------------------------------
 
 # Returns true if successful, i.e. on move to '(' of outermost SExpr
@@ -265,14 +266,26 @@ def MoveToOutermostSExpr(): bool
     return cur_char == '('
 enddef
 
+def CursorInSExpr(): bool
+    const cursor = getpos('.')
+    silent! normal! [(
+    const res = cursor != getpos('.')
+    call setpos('.', cursor)
+    return res
+enddef
+
 def MoveToStartOfCurrentParagraph()
+    # Move backwards until an empty line that is not in an SExpr is found,
+    # or -- if there is none -- to the first line of the file
     while true
-        MoveToOutermostSExpr()
-        if search('\S', 'b', line('.')) == 0
+        const empty_line = search('\m\C^\s*$', 'b', 1)
+        if !CursorInSExpr()
+            break
+        elseif empty_line == 0
+            cursor(1, 1)
             break
         endif
     endwhile
-    silent! normal! {
 enddef
 
 # ------------------------------------------------------------------------------
