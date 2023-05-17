@@ -116,6 +116,12 @@ def FormatInCurrentBuffer(ast: dict<any>)
         ->strcharpart(ast_coords[1].col - 1)
         ->trim(ws_mask, 1)
 
+    # If section of AST has trailing whitespace until the file end, remove it
+    cursor(ast_coords[1].line, ast_coords[1].col)
+    if search('\m\C\S', 'W') == 0
+        deletebufline('%', ast_coords[1].line + 1, line('$'))
+    endif
+
     # Replace section of AST by formatted lines (w/o killing surrounding text)
     deletebufline('%', ast_coords[0].line, ast_coords[1].line)
     if !empty(last_line_part_to_keep)
@@ -126,30 +132,14 @@ def FormatInCurrentBuffer(ast: dict<any>)
         first_line_part_to_keep->append(ast_coords[0].line - 1)
     endif
 
+    # If section of AST has leading whitespace until the file start, remove it
+    cursor(ast_coords[0].line, ast_coords[0].col)
+    if search('\m\C\S', 'bW') == 0
+        deletebufline('%', 1, ast_coords[0].line - 1)
+    endif
+
     # Restore cursor position
     call setpos('.', cursor)
-enddef
-
-def RemoveLeadingEmptyLines()
-    while true
-        const first_line = getline(1)
-        if first_line->trim()->empty()
-            deletebufline('%', 1)
-        else
-            break
-        endif
-    endwhile
-enddef
-
-def RemoveTrailingEmptyLines()
-    while true
-        const last_line = getline('$')
-        if last_line->trim()->empty()
-            deletebufline('%', '$')
-        else
-            break
-        endif
-    endwhile
 enddef
 
 # ------------------------------------------------------------------------------
@@ -168,7 +158,4 @@ enddef
 def smt2#formatter#FormatFile()
     const ast = smt2#parser#ParseFile()
     FormatInCurrentBuffer(ast)
-
-    RemoveLeadingEmptyLines()
-    RemoveTrailingEmptyLines()
 enddef
