@@ -22,10 +22,6 @@ endif
 " ------------------------------------------------------------------------------
 " Mappings for formatting functionality
 " ------------------------------------------------------------------------------
-if has("vim9script")
-    import autoload 'smt2/formatter.vim'
-endif
-
 nnoremap <silent> <buffer> <Plug>Smt2FormatCurrentParagraph :call smt2#formatter#FormatCurrentParagraph()<cr>
 if !hasmapto('<Plug>Smt2FormatCurrentParagraph', 'n') && (mapcheck('<localleader>f', 'n') == '')
     nmap <silent> <localleader>f <Plug>Smt2FormatCurrentParagraph
