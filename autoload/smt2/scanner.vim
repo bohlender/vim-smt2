@@ -23,7 +23,7 @@ def Token(kind: number, pos: number, lexeme: string): dict<any>
     return {kind: kind, pos: pos, lexeme: lexeme}
 enddef
 
-def smt2#scanner#TokenKind2Str(kind: number): string
+export def TokenKind2Str(kind: number): string
     if kind == token_lparen
         return "LParen"
     elseif kind == token_rparen
@@ -68,7 +68,7 @@ enddef
 # TODO: Enforce restriction to ASCII? We should if we use the lookup table below
 # TODO: Do not take a string but a character stream (or just buffer and pos)?
 
-def smt2#scanner#Scanner(source: string, start_line = 1, start_col = 1): dict<any>
+export def Scanner(source: string, start_line = 1, start_col = 1): dict<any>
     var scanner = {
         chars: source->trim(" \n\r\t", 2)->split('\zs'),
         line_offset: start_line, # start line of source string in buffer
@@ -91,7 +91,7 @@ def smt2#scanner#Scanner(source: string, start_line = 1, start_col = 1): dict<an
     return scanner
 enddef
 
-def smt2#scanner#NextToken(scanner: dict<any>)
+export def NextToken(scanner: dict<any>)
     if scanner.at_eof
         scanner.cur_token = Token(token_eof, scanner.pos, '')
     else
@@ -138,7 +138,7 @@ def NextPos(scanner: dict<any>)
     scanner.cur_char_nr = scanner.cur_char->char2nr()
 enddef
 
-def smt2#scanner#Enforce(scanner: dict<any>, expr: bool, msg: string, pos: number)
+export def Enforce(scanner: dict<any>, expr: bool, msg: string, pos: number)
     if !expr
         const coord = scanner->Pos2Coord(pos)
         throw printf("Syntax error (at %d:%d): %s ", coord.line, coord.col, msg)

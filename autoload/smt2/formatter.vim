@@ -1,6 +1,6 @@
 " Formatting requires a rather recent Vim version
-if (v:version < 802) || (v:version == 802 && !has("patch2725"))
-    const s:errmsg_oldvim = "Vim >= 8.2.2725 required for auto-formatting"
+if !has("vim9script")
+    const s:errmsg_oldvim = "Auto-formatting requires a Vim version with vim9script support."
 
     "Dummies
     function! smt2#formatter#FormatCurrentParagraph()
@@ -54,7 +54,6 @@ def FormatOneLine(ast: dict<any>): string
         return ast.value[0]->FormatOneLine()
     endif
     throw 'Cannot format AST node: ' .. string(ast)
-    return '' # Unreachable
 enddef
 
 def Format(ast: dict<any>, indent = 0): string
@@ -95,13 +94,11 @@ def Format(ast: dict<any>, indent = 0): string
         return formatted->join("\n\n")
     endif
     throw 'Cannot format AST node: ' .. string(ast)
-    return '' # Unreachable
 enddef
 
 # ------------------------------------------------------------------------------
 # Auxiliary
 # ------------------------------------------------------------------------------
-
 def FormatInCurrentBuffer(ast: dict<any>)
     const cursor = getpos('.')
 
@@ -123,7 +120,7 @@ def FormatInCurrentBuffer(ast: dict<any>)
     endif
 
     # Replace section of AST by formatted lines (w/o killing surrounding text)
-    deletebufline('%', ast_coords[0].line, ast_coords[1].line)
+    :silent deletebufline('%', ast_coords[0].line, ast_coords[1].line)
     if !empty(last_line_part_to_keep)
         last_line_part_to_keep->append(ast_coords[0].line - 1)
     endif
@@ -145,17 +142,17 @@ enddef
 # ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
-def smt2#formatter#FormatCurrentParagraph()
+export def FormatCurrentParagraph()
     const ast = smt2#parser#ParseCurrentParagraph()
     FormatInCurrentBuffer(ast)
 enddef
 
-def smt2#formatter#FormatOutermostSExpr()
+export def FormatOutermostSExpr()
     const ast = smt2#parser#ParseOutermostSExpr()
     FormatInCurrentBuffer(ast)
 enddef
 
-def smt2#formatter#FormatFile()
-    const ast = smt2#parser#ParseFile()
+export def FormatFile()
+    const ast = smt2#parser#ParseBuffer()
     FormatInCurrentBuffer(ast)
 enddef

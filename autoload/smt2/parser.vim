@@ -295,7 +295,7 @@ enddef
 # ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
-def smt2#parser#ParseCurrentParagraph(): dict<any>
+export def ParseCurrentParagraph(): dict<any>
     const cursor = getpos('.')
     MoveToStartOfCurrentParagraph()
     const from = getpos('.')
@@ -314,7 +314,7 @@ def smt2#parser#ParseCurrentParagraph(): dict<any>
     return ast
 enddef
 
-def smt2#parser#ParseOutermostSExpr(): dict<any>
+export def ParseOutermostSExpr(): dict<any>
     const cursor = getpos('.')
     if ! MoveToOutermostSExpr()
         throw "Cursor is not in an S-expression!"
@@ -335,7 +335,7 @@ def smt2#parser#ParseOutermostSExpr(): dict<any>
     return ast
 enddef
 
-def smt2#parser#ParseFile(): dict<any>
+export def ParseBuffer(): dict<any>
     const cursor = getpos('.')
     cursor(1, 1)
     const first_non_empty_line = search('.')
