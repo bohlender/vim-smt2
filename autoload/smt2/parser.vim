@@ -318,7 +318,7 @@ export def ParseCurrentParagraph(): Ast
     const lines_to_format = getline(from[1], '$')
     const source = join(lines_to_format, "\n")
 
-    var scanner = smt2#scanner#Scanner(source, from[1], from[2])
+    var scanner = scanner_ns.Scanner.new(source, from[1], from[2])
     const ast = scanner->ParseParagraph()
 
     if debug | ast->PrintAst() | endif
@@ -339,7 +339,7 @@ export def ParseOutermostSExpr(): Ast
     const lines_to_format = getline(from[1], '$')
     const source = join(lines_to_format, "\n")
 
-    var scanner = smt2#scanner#Scanner(source, from[1], from[2])
+    var scanner = scanner_ns.Scanner.new(source, from[1], from[2])
     const ast = scanner->ParseSExpr()
 
     if debug | ast->PrintAst() | endif
