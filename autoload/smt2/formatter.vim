@@ -16,6 +16,7 @@ if !has("vim9script")
     finish
 endif
 vim9script
+import "./parser.vim"
 
 # ------------------------------------------------------------------------------
 # Config
@@ -33,7 +34,7 @@ endif
 # ------------------------------------------------------------------------------
 # Formatter
 # ------------------------------------------------------------------------------
-def FitsOneLine(ast: dict<any>): bool
+def FitsOneLine(ast: parser.Ast): bool
     # A paragraph with several entries should not be formatted in one line
     if ast.kind ==# 'Paragraph' && len(ast.value) != 1
         return false
@@ -41,7 +42,7 @@ def FitsOneLine(ast: dict<any>): bool
     return ast.pos_to - ast.pos_from < g:smt2_formatter_short_length && !ast.contains_comment
 enddef
 
-def FormatOneLine(ast: dict<any>): string
+def FormatOneLine(ast: parser.Ast): string
     if ast.kind ==# 'Atom'
         return ast.value.lexeme
     elseif ast.kind ==# 'SExpr'
@@ -56,7 +57,7 @@ def FormatOneLine(ast: dict<any>): string
     throw 'Cannot format AST node: ' .. string(ast)
 enddef
 
-def Format(ast: dict<any>, indent = 0): string
+def Format(ast: parser.Ast, indent = 0): string
     const indent_str = repeat(g:smt2_formatter_indent_str, indent)
 
     if ast.kind ==# 'Atom'
@@ -99,7 +100,7 @@ enddef
 # ------------------------------------------------------------------------------
 # Auxiliary
 # ------------------------------------------------------------------------------
-def FormatInCurrentBuffer(ast: dict<any>)
+def FormatInCurrentBuffer(ast: parser.Ast)
     const cursor = getpos('.')
 
     # Format lines and potential surrounding text on them

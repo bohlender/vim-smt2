@@ -7,7 +7,6 @@ set maxfuncdepth=100000000 # SMT files tend to be highly nested
 # TODO: Retry iterative parsing now that we have a scanner and simpler grammar
 # TODO: Refer to token kind by name, e.g. token_comment instead of 8
 # TODO: Change Ast.kind type from string to enum/number?
-# TODO: Now that vim9script has classes replace Ast dict<any> by class
 
 # ------------------------------------------------------------------------------
 # AST nodes
@@ -16,20 +15,29 @@ set maxfuncdepth=100000000 # SMT files tend to be highly nested
 #       function in the formatter.
 #       Here, pos_from and pos_to refer to indices of characters -- not tokens.
 # ------------------------------------------------------------------------------
-def Ast(kind: string, value: any, pos_from: number, pos_to: number, contains_comment: bool, scanner: scanner_ns.Scanner): dict<any>
+export class Ast
+    var kind: string
+    var value: any
+    var pos_from: number
+    var pos_to: number
+    var contains_comment: bool
+    var scanner: scanner_ns.Scanner
+
+    def new(this.kind, this.value, this.pos_from, this.pos_to, this.contains_comment, this.scanner)
+    enddef
+
     # User-facing functionality wants start/end line and column -- not positions
     def CalcCoords(): list<dict<number>>
-        const from = scanner.CalcCoord(pos_from)
+        const from = this.scanner.CalcCoord(this.pos_from)
         # If expression ends at end of line, pos_to will be in next line.
         # That's undesired. Stay in the actual last line.
-        var to = scanner.CalcCoord(pos_to - 1)
+        var to = this.scanner.CalcCoord(this.pos_to - 1)
         to.col += 1
         return [from, to]
     enddef
-    return {kind: kind, value: value, pos_from: pos_from, pos_to: pos_to, contains_comment: contains_comment, CalcCoords: CalcCoords}
-enddef
+endclass
 
-def FileAst(paragraphs: list<dict<any>>, pos_from: number, pos_to: number, scanner: scanner_ns.Scanner): dict<any>
+def FileAst(paragraphs: list<Ast>, pos_from: number, pos_to: number, scanner: scanner_ns.Scanner): Ast
     var contains_comment = false
     for paragraph in paragraphs
         if paragraph.contains_comment
@@ -37,10 +45,10 @@ def FileAst(paragraphs: list<dict<any>>, pos_from: number, pos_to: number, scann
             break
         endif
     endfor
-    return Ast('File', paragraphs, pos_from, pos_to, contains_comment, scanner)
+    return Ast.new('File', paragraphs, pos_from, pos_to, contains_comment, scanner)
 enddef
 
-def ParagraphAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scanner: scanner_ns.Scanner): dict<any>
+def ParagraphAst(exprs: list<Ast>, pos_from: number, pos_to: number, scanner: scanner_ns.Scanner): Ast
     var contains_comment = false
     for expr in exprs
         if expr.contains_comment
@@ -48,10 +56,10 @@ def ParagraphAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scann
             break
         endif
     endfor
-    return Ast('Paragraph', exprs, pos_from, pos_to, contains_comment, scanner)
+    return Ast.new('Paragraph', exprs, pos_from, pos_to, contains_comment, scanner)
 enddef
 
-def SExprAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scanner: scanner_ns.Scanner): dict<any>
+def SExprAst(exprs: list<Ast>, pos_from: number, pos_to: number, scanner: scanner_ns.Scanner): Ast
     var contains_comment = false
     for expr in exprs
         if expr.contains_comment
@@ -59,14 +67,14 @@ def SExprAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scanner: 
             break
         endif
     endfor
-    return Ast('SExpr', exprs, pos_from, pos_to, contains_comment, scanner)
+    return Ast.new('SExpr', exprs, pos_from, pos_to, contains_comment, scanner)
 enddef
 
-def AtomAst(token: scanner_ns.Token, scanner: scanner_ns.Scanner): dict<any>
-    return Ast('Atom', token, token.pos, token.pos + len(token.lexeme), token.kind == 8, scanner)
+def AtomAst(token: scanner_ns.Token, scanner: scanner_ns.Scanner): Ast
+    return Ast.new('Atom', token, token.pos, token.pos + len(token.lexeme), token.kind == 8, scanner)
 enddef
 
-def PrintAst(ast: dict<any>, indent = 0)
+def PrintAst(ast: Ast, indent = 0)
     const coords = ast.CalcCoords()
 
     echo printf("[%5d-%-5d) [%4d:%-3d-%4d:%-3d) %s[%s] ",
@@ -146,7 +154,7 @@ def AtStartOfAtom(scanner: scanner_ns.Scanner): bool
     return 2 <= scanner.cur_token.kind && scanner.cur_token.kind <= 8
 enddef
 
-def ParseAtom(scanner: scanner_ns.Scanner): dict<any>
+def ParseAtom(scanner: scanner_ns.Scanner): Ast
     if debug
         scanner->smt2#scanner#Enforce(scanner->AtStartOfAtom(),
             "ParseAtom called but not at start of Atom",
@@ -165,7 +173,7 @@ def AtStartOfExpr(scanner: scanner_ns.Scanner): bool
     return scanner->AtStartOfSExpr() || scanner->AtStartOfAtom()
 enddef
 
-def ParseExpr(scanner: scanner_ns.Scanner): dict<any>
+def ParseExpr(scanner: scanner_ns.Scanner): Ast
     if debug
         scanner->smt2#scanner#Enforce(scanner->AtStartOfExpr(),
             "ParseExpr called but not at start of Expr",
@@ -183,7 +191,7 @@ enddef
 # ------------------------------------------------------------------------------
 const AtStartOfSExpr = funcref(AtStartOfLParen)
 
-def ParseSExpr(scanner: scanner_ns.Scanner): dict<any>
+def ParseSExpr(scanner: scanner_ns.Scanner): Ast
     const pos_from = scanner.cur_token.pos
 
     if debug
@@ -194,7 +202,7 @@ def ParseSExpr(scanner: scanner_ns.Scanner): dict<any>
     scanner->ParseLParen()
 
     # Expr*
-    var exprs: list<dict<any>>
+    var exprs: list<Ast>
     while scanner->AtStartOfExpr()
         exprs->add(scanner->ParseExpr())
     endwhile
@@ -211,7 +219,7 @@ enddef
 # ------------------------------------------------------------------------------
 # Paragraph
 # ------------------------------------------------------------------------------
-def ParseParagraph(scanner: scanner_ns.Scanner): dict<any>
+def ParseParagraph(scanner: scanner_ns.Scanner): Ast
     const pos_from = scanner.cur_token.pos
 
     # Expr+
@@ -231,7 +239,7 @@ enddef
 # ------------------------------------------------------------------------------
 # File
 # ------------------------------------------------------------------------------
-def ParseFile(scanner: scanner_ns.Scanner): dict<any>
+def ParseFile(scanner: scanner_ns.Scanner): Ast
     const pos_from = scanner.cur_token.pos
 
     var paragraphs = []
@@ -298,7 +306,7 @@ enddef
 # ------------------------------------------------------------------------------
 # Public functions
 # ------------------------------------------------------------------------------
-export def ParseCurrentParagraph(): dict<any>
+export def ParseCurrentParagraph(): Ast
     const cursor = getpos('.')
     MoveToStartOfCurrentParagraph()
     const from = getpos('.')
@@ -317,7 +325,7 @@ export def ParseCurrentParagraph(): dict<any>
     return ast
 enddef
 
-export def ParseOutermostSExpr(): dict<any>
+export def ParseOutermostSExpr(): Ast
     const cursor = getpos('.')
     if ! MoveToOutermostSExpr()
         throw "Cursor is not in an S-expression!"
@@ -338,7 +346,7 @@ export def ParseOutermostSExpr(): dict<any>
     return ast
 enddef
 
-export def ParseBuffer(): dict<any>
+export def ParseBuffer(): Ast
     const cursor = getpos('.')
     cursor(1, 1)
     const first_non_empty_line = search('.')
