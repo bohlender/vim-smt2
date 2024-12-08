@@ -1,4 +1,6 @@
 vim9script
+import "./scanner.vim" as scanner_ns
+
 const debug = false
 set maxfuncdepth=100000000 # SMT files tend to be highly nested
 
@@ -59,7 +61,7 @@ def SExprAst(exprs: list<dict<any>>, pos_from: number, pos_to: number, scanner: 
     return Ast('SExpr', exprs, pos_from, pos_to, contains_comment, scanner)
 enddef
 
-def AtomAst(token: dict<any>, scanner: dict<any>): dict<any>
+def AtomAst(token: scanner_ns.Token, scanner: dict<any>): dict<any>
     return Ast('Atom', token, token.pos, token.pos + len(token.lexeme), token.kind == 8, scanner)
 enddef
 
@@ -105,7 +107,7 @@ def AtStartOfLParen(scanner: dict<any>): bool
     return scanner.cur_token.kind == 0 # token_lparen
 enddef
 
-def ParseLParen(scanner: dict<any>): dict<any>
+def ParseLParen(scanner: dict<any>): scanner_ns.Token
     if debug
         scanner->smt2#scanner#Enforce(scanner->AtStartOfLParen(),
             "ParseLParen called but not at start of LParen",
@@ -124,7 +126,7 @@ def AtStartOfRParen(scanner: dict<any>): bool
     return scanner.cur_token.kind == 1 # token_rparen
 enddef
 
-def ParseRParen(scanner: dict<any>): dict<any>
+def ParseRParen(scanner: dict<any>): scanner_ns.Token
     if debug
         scanner->smt2#scanner#Enforce(scanner->AtStartOfRParen(),
             "ParseRParen called but not at start of RParen",

@@ -19,9 +19,14 @@ const token_keyword = 7
 const token_comment = 8
 const token_eof = 9
 
-def Token(kind: number, pos: number, lexeme: string): dict<any>
-    return {kind: kind, pos: pos, lexeme: lexeme}
-enddef
+export class Token
+    var kind: number
+    var pos: number
+    var lexeme: string
+
+    def new(this.kind, this.pos, this.lexeme)
+    enddef
+endclass
 
 export def TokenKind2Str(kind: number): string
     if kind == token_lparen
@@ -50,7 +55,7 @@ export def TokenKind2Str(kind: number): string
     endif
 enddef
 
-def PrettyPrint(scanner: dict<any>, token: dict<any>)
+def PrettyPrint(scanner: dict<any>, token: Token)
     const coord = scanner->Pos2Coord(token.pos)
     echo printf("%5d %4d:%-3d  %8s %s", token.pos, coord.line, coord.col, token.kind->TokenKind2Str(), token.lexeme)
 enddef
@@ -93,16 +98,16 @@ enddef
 
 export def NextToken(scanner: dict<any>)
     if scanner.at_eof
-        scanner.cur_token = Token(token_eof, scanner.pos, '')
+        scanner.cur_token = Token.new(token_eof, scanner.pos, '')
     else
         scanner->SkipWhitespace() # Cannot end up at eof since end is trimmed
 
         const nr = scanner.cur_char_nr
         if nr == 40 # '('
-            scanner.cur_token = Token(token_lparen, scanner.pos, '(')
+            scanner.cur_token = Token.new(token_lparen, scanner.pos, '(')
             scanner->NextPos()
         elseif nr == 41 # ')'
-            scanner.cur_token = Token(token_rparen, scanner.pos, ')')
+            scanner.cur_token = Token.new(token_rparen, scanner.pos, ')')
             scanner->NextPos()
         elseif nr->IsStartOfSimpleSymbol()
             scanner.cur_token = scanner->ReadSimpleSymbol()
@@ -185,7 +190,7 @@ enddef
 #
 # Note: The source string has all lines joined by "\n" so "\r" can be ignored
 # ------------------------------------------------------------------------------
-def ReadComment(scanner: dict<any>): dict<any>
+def ReadComment(scanner: dict<any>): Token
     if debug | scanner->Enforce(scanner.cur_char == ';', "Not the start of a comment", scanner.pos) | endif
 
     const start_pos = scanner.pos
@@ -193,7 +198,7 @@ def ReadComment(scanner: dict<any>): dict<any>
     while !scanner.at_eof && scanner.cur_char_nr != 10
         scanner->NextPos()
     endwhile
-    return Token(token_comment, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+    return Token.new(token_comment, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
@@ -207,7 +212,7 @@ def IsDigit(char_nr: number): bool
     return 48 <= char_nr && char_nr <= 57
 enddef
 
-def ReadNumber(scanner: dict<any>): dict<any>
+def ReadNumber(scanner: dict<any>): Token
     if debug | scanner->Enforce(scanner.cur_char_nr->IsDigit(), "Not the start of a number", scanner.pos) | endif
 
     const starts_with_zero = scanner.cur_char == '0'
@@ -233,7 +238,7 @@ def ReadNumber(scanner: dict<any>): dict<any>
         endif
     endwhile
     const kind = is_decimal ? token_decimal : token_numeral
-    return Token(kind, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+    return Token.new(kind, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
@@ -255,7 +260,7 @@ def InitIsAlphaNumericCharNr(): list<bool>
 enddef
 const is_alphanumeric_char_nr = InitIsAlphaNumericCharNr()
 
-def ReadBv(scanner: dict<any>): dict<any>
+def ReadBv(scanner: dict<any>): Token
     if debug | scanner->Enforce(scanner.cur_char == '#', "Not the start of a bit vector literal", scanner.pos) | endif
 
     const start_pos = scanner.pos
@@ -280,7 +285,7 @@ def ReadBv(scanner: dict<any>): dict<any>
     else
         scanner->Enforce(false, "invalid bit vector literal -- expected 'x' or 'b'", scanner.pos)
     endif
-    return Token(token_bv, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+    return Token.new(token_bv, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
@@ -288,7 +293,7 @@ enddef
 #              quotes with escape sequence ""
 # ------------------------------------------------------------------------------
 # TODO: Allow only printable characters, i.e. ranges [32, 126], [128-255]?
-def ReadString(scanner: dict<any>): dict<any>
+def ReadString(scanner: dict<any>): Token
     if debug | scanner->Enforce(scanner.cur_char == '"', "Not the start of a string", scanner.pos) | endif
 
     const start_pos = scanner.pos
@@ -304,7 +309,7 @@ def ReadString(scanner: dict<any>): dict<any>
         endif
         scanner->NextPos()
     endwhile
-    return Token(token_string, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+    return Token.new(token_string, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
@@ -330,7 +335,7 @@ def IsStartOfSimpleSymbol(char_nr: number): bool
     return is_simple_symbol_char_nr[char_nr] && !(48 <= char_nr && char_nr <= 57)
 enddef
 
-def ReadSimpleSymbol(scanner: dict<any>): dict<any>
+def ReadSimpleSymbol(scanner: dict<any>): Token
     if debug | scanner->Enforce(scanner.cur_char_nr->IsStartOfSimpleSymbol(), "Not the start of a simple symbol", scanner.pos) | endif
 
     const start_pos = scanner.pos
@@ -338,7 +343,7 @@ def ReadSimpleSymbol(scanner: dict<any>): dict<any>
     while !scanner.at_eof && is_simple_symbol_char_nr[scanner.cur_char_nr]
         scanner->NextPos()
     endwhile
-    return Token(token_symbol, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+    return Token.new(token_symbol, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
@@ -347,7 +352,7 @@ enddef
 #              and ends with '|' and does not otherwise include '|' or '\'
 # ------------------------------------------------------------------------------
 # TODO: Allow only printable characters, i.e. ranges [32, 126], [128-255]?
-def ReadQuotedSymbol(scanner: dict<any>): dict<any>
+def ReadQuotedSymbol(scanner: dict<any>): Token
     if debug | scanner->Enforce(scanner.cur_char == '|', "Not the start of a quoted symbol", scanner.pos) | endif
 
     const start_pos = scanner.pos
@@ -361,13 +366,13 @@ def ReadQuotedSymbol(scanner: dict<any>): dict<any>
         scanner->NextPos()
     endwhile
     scanner->NextPos()
-    return Token(token_symbol, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+    return Token.new(token_symbol, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
 
 # ------------------------------------------------------------------------------
 # <keyword> ::= :<simple symbol>
 # ------------------------------------------------------------------------------
-def ReadKeyword(scanner: dict<any>): dict<any>
+def ReadKeyword(scanner: dict<any>): Token
     if debug | scanner->Enforce(scanner.cur_char == ':', "Not the start of a keyword", scanner.pos) | endif
 
     const start_pos = scanner.pos
@@ -375,5 +380,5 @@ def ReadKeyword(scanner: dict<any>): dict<any>
     while !scanner.at_eof && is_simple_symbol_char_nr[scanner.cur_char_nr]
         scanner->NextPos()
     endwhile
-    return Token(token_keyword, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
+    return Token.new(token_keyword, start_pos, scanner.chars[start_pos : scanner.pos - 1]->join(''))
 enddef
