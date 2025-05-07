@@ -143,7 +143,7 @@ syntax match smt2Identifier "\m\C\<[a-z_][a-zA-Z0-9_\-\.']*\>"
 syntax match smt2Type "\m\C\<[A-Z][a-zA-Z0-9_\-\.']*\>"
 
 " Strings
-syntax region smt2String start=+"+ skip=+\\\\\|\\"+ end=+"+
+syntax region smt2String start=+"+ skip=+""+ end=+"+
 syntax match smt2Option "\m\C\<:[a-zA-Z0-9_\-\.']*\>"
 
 " Constructors
