@@ -70,7 +70,7 @@ def SExprAst(exprs: list<Ast>, pos_from: number, pos_to: number, scanner: scanne
     return Ast.new('SExpr', exprs, pos_from, pos_to, contains_comment, scanner)
 enddef
 
-def AtomAst(token: scanner_ns.Token, scanner: scanner_ns.Scanner): Ast
+export def AtomAst(token: scanner_ns.Token, scanner: scanner_ns.Scanner): Ast
     return Ast.new('Atom', token, token.pos, token.pos + len(token.lexeme), token.kind == 8, scanner)
 enddef
 
@@ -242,7 +242,7 @@ enddef
 def ParseFile(scanner: scanner_ns.Scanner): Ast
     const pos_from = scanner.cur_token.pos
 
-    var paragraphs = []
+    var paragraphs: list<Ast> = []
     while scanner.cur_token.kind != 9 # token_eof
         const ast = scanner->ParseParagraph()
         paragraphs->add(ast)
