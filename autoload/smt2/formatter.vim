@@ -16,6 +16,7 @@ if !has("vim9script")
     finish
 endif
 vim9script
+import "./scanner.vim" as scanner_ns
 import "./parser.vim"
 
 # ------------------------------------------------------------------------------
@@ -44,7 +45,8 @@ enddef
 
 def FormatOneLine(ast: parser.Ast): string
     if ast.kind ==# 'Atom'
-        return ast.value.lexeme
+        var token: scanner_ns.Token = ast.value
+        return token.lexeme
     elseif ast.kind ==# 'SExpr'
         var formatted = []
         for expr in ast.value
@@ -61,7 +63,8 @@ def Format(ast: parser.Ast, indent = 0): string
     const indent_str = repeat(g:smt2_formatter_indent_str, indent)
 
     if ast.kind ==# 'Atom'
-        return indent_str .. ast.value.lexeme
+        const token: scanner_ns.Token = ast.value
+        return indent_str .. token.lexeme
     elseif ast.kind ==# 'SExpr'
         # Short expression -- avoid line breaks
         if ast->FitsOneLine()
@@ -72,12 +75,13 @@ def Format(ast: parser.Ast, indent = 0): string
         # Don't break before first subexpression if it's an atom
         # Note: ast.value->empty() == false; otherwise it would fit in one line
         var formatted = []
-        if (ast.value[0].kind ==# 'Atom')
-            call formatted->add(ast.value[0]->Format(0))
+        const exprs: list<parser.Ast> = ast.value
+        if (exprs[0].kind ==# 'Atom')
+            call formatted->add(exprs[0]->Format(0))
         else
-            call formatted->add("\n" .. ast.value[0]->Format(indent + 1))
+            call formatted->add("\n" .. exprs[0]->Format(indent + 1))
         endif
-        for child in ast.value[1 :]
+        for child in exprs[1 :]
             call formatted->add(child->Format(indent + 1))
         endfor
         return indent_str .. "(" .. formatted->join("\n") .. ")"
